@@ -1,0 +1,2 @@
+Random:
+    mov x+0, Seed+0
