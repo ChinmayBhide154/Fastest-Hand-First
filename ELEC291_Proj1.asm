@@ -19,6 +19,8 @@ y:   ds 4
 bcd: ds 5
 T2ov: ds 2 ; 16-bit timer 2 overflow (to measure the period of very slow signals)
 Seed: ds 4
+p1Score: ds 3
+p2Score: ds 3
 
 BSEG
 mf: dbit 1
@@ -50,7 +52,7 @@ $include(LCD_4bit.inc) ; A library of LCD related functions and utility macros
 $LIST
 
 ;                     1234567890123456    <- This helps determine the location of the counter
-Initial_Message:  db 'Random Numbers', 0
+Initial_Message:  db '', 0
 No_Signal_Str:    db '', 0
 
 Timer0_Init:
@@ -123,19 +125,46 @@ MyProgram:
 	Set_Cursor(1, 1)
     Send_Constant_String(#Initial_Message)
     
+    Set_Cursor(2, 1)
+    mov x, p1Score
+    add a, #0x00
+    da a
+    mov p1Score, a
+    Display_BCD(p1Score)
+    
+    Set_Cursor(2, 15)
+    mov x, p2Score
+    add a, #0x00
+    da a
+    mov p2Score, a
+    Display_BCD(p1Score)
+    
+forever:
+	; Repeated Random time wait calls are here for show just for now
+	Set_Cursor(1, 1)
+	lcall Random
+    Wait_Milli_Seconds(Seed+0)
+    Wait_Milli_Seconds(Seed+1)
+    Wait_Milli_Seconds(Seed+2)
+    Wait_Milli_Seconds(Seed+3)
+    
     lcall Random
     Wait_Milli_Seconds(Seed+0)
     Wait_Milli_Seconds(Seed+1)
     Wait_Milli_Seconds(Seed+2)
     Wait_Milli_Seconds(Seed+3)
     
-
-
-	
-Bridge_Random:
-	ljmp Random
+    lcall Random
+    Wait_Milli_Seconds(Seed+0)
+    Wait_Milli_Seconds(Seed+1)
+    Wait_Milli_Seconds(Seed+2)
+    Wait_Milli_Seconds(Seed+3)
     
-forever:
+    lcall Random
+    Wait_Milli_Seconds(Seed+0)
+    Wait_Milli_Seconds(Seed+1)
+    Wait_Milli_Seconds(Seed+2)
+    Wait_Milli_Seconds(Seed+3)
     ; synchronize with rising edge of the signal applied to pin P0.0
     ;ljmp Wait
     
@@ -155,9 +184,6 @@ forever:
     mov Seed+2, #0x87
     mov Seed+3, TL2
     clr TR2
-    
-    jnb P2.4, Bridge_Random
-    ljmp forever
     
 synch1:
 	mov a, T2ov+1
@@ -233,7 +259,7 @@ Random:
     mov Seed+2, x+2
     mov Seed+3, x+3
     
-    Set_Cursor(2, 1)
+    Set_Cursor(1, 1)
 	lcall hex2bcd
 	lcall Display_10_digit_BCD
 	lcall Timer0_ISR ;Why no alarm trigger?
