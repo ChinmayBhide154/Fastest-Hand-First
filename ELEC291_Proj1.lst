@@ -1,5 +1,5 @@
                   2   $LIST
-0000              4   ; my edit
+0000              4   
 0000              5   org 0000H
 0000 0203EE       6      ljmp MyProgram
 0003              7   
@@ -297,7 +297,7 @@
 0525 D0E0       236            pop acc
 0527 12002E     237            lcall hex2bcd
 052A 12039C     238            lcall Display_10_digit_BCD
-052D 120399     239            lcall Timer0_ISR
+052D 120399     239            lcall Timer0_ISR ;Why no alarm trigger?
 0530 22         240       ret
 0531            241       
 0531            242      

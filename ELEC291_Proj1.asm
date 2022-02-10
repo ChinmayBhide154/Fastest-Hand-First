@@ -1,7 +1,7 @@
 $NOLIST
 $MODLP51
 $LIST
-; my edit
+
 org 0000H
    ljmp MyProgram
 
@@ -236,7 +236,7 @@ Random:
     Set_Cursor(2, 1)
 	lcall hex2bcd
 	lcall Display_10_digit_BCD
-	lcall Timer0_ISR
+	lcall Timer0_ISR ;Why no alarm trigger?
     ret
     
    
