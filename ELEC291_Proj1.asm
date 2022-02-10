@@ -31,9 +31,13 @@ $LIST
 
 
 CLK           EQU 22118400 ; Microcontroller system crystal frequency in Hz
-TIMER0_RATE   EQU 4096     ; 2048Hz squarewave (peak amplitude of CEM-1203 speaker)
+TIMER0_RATE   EQU 1000     ; 2048Hz squarewave (peak amplitude of CEM-1203 speaker)
+TIMER0_RATE_HIGH EQU 4096
+TIMER0_RATE_LOW EQU 1000
 TIMER0_RELOAD EQU ((65536-(CLK/TIMER0_RATE)))
+TIMER0_RELOAD_HIGH EQU ((65536-(CLK/TIMER0_RATE_HIGH)))
 TIMER2_RATE   EQU 1000     ; 1000Hz, for a timer tick of 1ms
+;Timer0_Rate used to change pitch
 TIMER2_RELOAD EQU ((65536-(CLK/TIMER2_RATE)))
 
 cseg
@@ -70,6 +74,20 @@ Timer0_Init:
     setb TR0  ; Start timer 0
 	ret
 	
+Timer0_HIGH_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_HIGH)
+	mov TL0, #low(TIMER0_RELOAD_HIGH)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_HIGH)
+	mov RL0, #low(TIMER0_RELOAD_HIGH)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
 Timer0_ISR:
 	;clr TF0  ; According to the data sheet this is done for us already.
 	cpl SOUND_OUT ; Connect speaker to P1.1!
@@ -121,6 +139,9 @@ MyProgram:
     mov SP, #7FH
     lcall Initialize_All
     setb P0.0 ; Pin is used as input
+    
+    lcall Timer0_Init
+    lcall InitTimer2
 
 	Set_Cursor(1, 1)
     Send_Constant_String(#Initial_Message)
@@ -144,30 +165,28 @@ forever:
 	Set_Cursor(1, 1)
 	lcall Random
 	;wait random amount of time
-    Wait_Milli_Seconds(Seed+0)
-    Wait_Milli_Seconds(Seed+1)
-    Wait_Milli_Seconds(Seed+2)
-    Wait_Milli_Seconds(Seed+3)
+    lcall Wait_Random_Time
+    lcall Timer0_HIGH_Init
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    lcall Timer0_Init
+    ;change
     
     lcall Random
-    Wait_Milli_Seconds(Seed+0)
-    Wait_Milli_Seconds(Seed+1)
-    Wait_Milli_Seconds(Seed+2)
-    Wait_Milli_Seconds(Seed+3)
-    
+	;wait random amount of time
+    lcall Wait_Random_Time
     lcall Random
-    Wait_Milli_Seconds(Seed+0)
-    Wait_Milli_Seconds(Seed+1)
-    Wait_Milli_Seconds(Seed+2)
-    Wait_Milli_Seconds(Seed+3)
-    
+	;wait random amount of time
+    lcall Wait_Random_Time
     lcall Random
-    Wait_Milli_Seconds(Seed+0)
-    Wait_Milli_Seconds(Seed+1)
-    Wait_Milli_Seconds(Seed+2)
-    Wait_Milli_Seconds(Seed+3)
-    ; synchronize with rising edge of the signal applied to pin P0.0
-    ;ljmp Wait
+	;wait random amount of time
+    lcall Wait_Random_Time
+    lcall Random
+	;wait random amount of time
+    lcall Wait_Random_Time
+    
     
     clr TR2 ; Stop timer 2
     mov TL2, #0
@@ -266,7 +285,39 @@ Random:
 	lcall Timer0_ISR ;Why no alarm trigger?
     ret
     
-   
+Wait_Random_Time:
+	Wait_Milli_Seconds(Seed+0)
+    Wait_Milli_Seconds(Seed+1)
+    Wait_Milli_Seconds(Seed+2)
+    Wait_Milli_Seconds(Seed+3)
+    Wait_Milli_Seconds(Seed+0)
+    Wait_Milli_Seconds(Seed+1)
+    Wait_Milli_Seconds(Seed+2)
+    Wait_Milli_Seconds(Seed+3)
+    Wait_Milli_Seconds(Seed+0)
+    Wait_Milli_Seconds(Seed+1)
+    Wait_Milli_Seconds(Seed+2)
+    Wait_Milli_Seconds(Seed+3)
+    Wait_Milli_Seconds(Seed+0)
+    Wait_Milli_Seconds(Seed+1)
+    Wait_Milli_Seconds(Seed+2)
+    Wait_Milli_Seconds(Seed+3)
+    Wait_Milli_Seconds(Seed+0)
+    Wait_Milli_Seconds(Seed+1)
+    Wait_Milli_Seconds(Seed+2)
+    Wait_Milli_Seconds(Seed+3)
+    Wait_Milli_Seconds(Seed+0)
+    Wait_Milli_Seconds(Seed+1)
+    Wait_Milli_Seconds(Seed+2)
+    Wait_Milli_Seconds(Seed+3)
+    Wait_Milli_Seconds(Seed+0)
+    Wait_Milli_Seconds(Seed+1)
+    Wait_Milli_Seconds(Seed+2)
+    Wait_Milli_Seconds(Seed+3)
+    Wait_Milli_Seconds(Seed+0)
+    Wait_Milli_Seconds(Seed+1)
+    Wait_Milli_Seconds(Seed+2)
+    Wait_Milli_Seconds(Seed+3)
+    ret
     
-
 end
