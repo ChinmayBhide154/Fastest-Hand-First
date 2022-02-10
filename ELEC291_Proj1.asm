@@ -2,6 +2,10 @@ $NOLIST
 $MODLP51
 $LIST
 ; my edit
+
+;timer closer to LCD: is connected to pin 2.0
+; other timer is connected to pin 2.1
+
 org 0000H
    ljmp MyProgram
 
@@ -160,10 +164,12 @@ MyProgram:
     mov p2Score, a
     Display_BCD(p1Score)
     
+    lcall Calculate_Capacitance_P21 
+    
 forever:
 	; Repeated Random time wait calls are here for show just for now
-	Set_Cursor(1, 1)
-	lcall Random
+	;Set_Cursor(1, 1)
+	;lcall Random
 	;wait random amount of time
     lcall Wait_Random_Time
     lcall Timer0_HIGH_Init
@@ -171,7 +177,12 @@ forever:
     Wait_Milli_Seconds(#255)
     Wait_Milli_Seconds(#255)
     Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
     lcall Timer0_Init
+    lcall Calculate_Capacitance_P21 
     ;change
     
     lcall Random
@@ -257,9 +268,9 @@ skip_this:
 	
 	
 	; Convert the result to BCD and display on LCD
-	Set_Cursor(2, 1)
-	lcall hex2bcd
-	lcall Display_10_digit_BCD
+	;Set_Cursor(2, 1)
+	;lcall hex2bcd
+	;lcall Display_10_digit_BCD
     ljmp forever ; Repeat! 
 
 
@@ -279,9 +290,9 @@ Random:
     mov Seed+2, x+2
     mov Seed+3, x+3
     
-    Set_Cursor(1, 3)
-	lcall hex2bcd
-	lcall Display_10_digit_BCD
+    ;Set_Cursor(1, 3)
+	;lcall hex2bcd
+	;lcall Display_10_digit_BCD
 	lcall Timer0_ISR ;Why no alarm trigger?
     ret
     
@@ -319,5 +330,47 @@ Wait_Random_Time:
     Wait_Milli_Seconds(Seed+2)
     Wait_Milli_Seconds(Seed+3)
     ret
+    
+Calculate_Capacitance_P21: ; Left one
+	Load_y(45) ; One clock pulse is 1/22.1184MHz=45.21123ns
+	lcall mul32
+	
+	Load_y(10)
+	lcall div32
+	
+	Load_y(10)
+	lcall div32
+	
+	Load_y(144)
+	lcall mul32
+	
+	Load_y(100)
+	lcall div32
+	
+	Load_y(100)
+	lcall div32
+	
+	Load_y(10)
+	lcall div32
+	
+	Load_y(3)
+	lcall div32
+	
+	Load_y(100)
+	lcall mul32
+	
+	Load_y(100)
+	lcall sub32
+	
+	Load_y(95)
+	lcall sub32
+	
+	; Convert the result to BCD and display on LCD
+	Set_Cursor(1, 3)
+	lcall hex2bcd
+	lcall Display_10_digit_BCD
+	ret
+
+Calculate_Capacitance_P20: ; Right one
     
 end
