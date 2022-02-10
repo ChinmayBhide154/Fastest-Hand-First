@@ -52,7 +52,7 @@ $include(LCD_4bit.inc) ; A library of LCD related functions and utility macros
 $LIST
 
 ;                     1234567890123456    <- This helps determine the location of the counter
-Initial_Message:  db '', 0
+Initial_Message:  db 'P1            P2', 0
 No_Signal_Str:    db '', 0
 
 Timer0_Init:
@@ -259,7 +259,7 @@ Random:
     mov Seed+2, x+2
     mov Seed+3, x+3
     
-    Set_Cursor(1, 1)
+    Set_Cursor(1, 3)
 	lcall hex2bcd
 	lcall Display_10_digit_BCD
 	lcall Timer0_ISR ;Why no alarm trigger?
