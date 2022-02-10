@@ -4,7 +4,10 @@ $LIST
 
 org 0000H
    ljmp MyProgram
-   
+
+; Timer/Counter 0 overflow interrupt vector
+org 0x000B
+	ljmp Timer0_ISR   
 ; Timer/Counter 2 overflow interrupt vector
 org 0x002B
 	ljmp Timer2_ISR
@@ -15,6 +18,7 @@ x:   ds 4
 y:   ds 4
 bcd: ds 5
 T2ov: ds 2 ; 16-bit timer 2 overflow (to measure the period of very slow signals)
+Seed: ds 4
 
 BSEG
 mf: dbit 1
@@ -22,6 +26,13 @@ mf: dbit 1
 $NOLIST
 $include(math32.inc)
 $LIST
+
+
+CLK           EQU 22118400 ; Microcontroller system crystal frequency in Hz
+TIMER0_RATE   EQU 4096     ; 2048Hz squarewave (peak amplitude of CEM-1203 speaker)
+TIMER0_RELOAD EQU ((65536-(CLK/TIMER0_RATE)))
+TIMER2_RATE   EQU 1000     ; 1000Hz, for a timer tick of 1ms
+TIMER2_RELOAD EQU ((65536-(CLK/TIMER2_RATE)))
 
 cseg
 ; These 'equ' must match the hardware wiring
@@ -32,14 +43,35 @@ LCD_D4 equ P3.4
 LCD_D5 equ P3.5
 LCD_D6 equ P3.6
 LCD_D7 equ P3.7
+SOUND_OUT equ P1.1
 
 $NOLIST
 $include(LCD_4bit.inc) ; A library of LCD related functions and utility macros
 $LIST
 
 ;                     1234567890123456    <- This helps determine the location of the counter
-Initial_Message:  db 'Capacitance: nF', 0
-No_Signal_Str:    db 'No signal      ', 0
+Initial_Message:  db 'Random Numbers', 0
+No_Signal_Str:    db '', 0
+
+Timer0_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD)
+	mov TL0, #low(TIMER0_RELOAD)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD)
+	mov RL0, #low(TIMER0_RELOAD)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+Timer0_ISR:
+	;clr TF0  ; According to the data sheet this is done for us already.
+	cpl SOUND_OUT ; Connect speaker to P1.1!
+	reti
 
 ; Sends 10-digit BCD number in bcd to the LCD
 Display_10_digit_BCD:
@@ -91,8 +123,22 @@ MyProgram:
 	Set_Cursor(1, 1)
     Send_Constant_String(#Initial_Message)
     
+    lcall Random
+    Wait_Milli_Seconds(Seed+0)
+    Wait_Milli_Seconds(Seed+1)
+    Wait_Milli_Seconds(Seed+2)
+    Wait_Milli_Seconds(Seed+3)
+    
+
+
+	
+Bridge_Random:
+	ljmp Random
+    
 forever:
     ; synchronize with rising edge of the signal applied to pin P0.0
+    ;ljmp Wait
+    
     clr TR2 ; Stop timer 2
     mov TL2, #0
     mov TH2, #0
@@ -100,6 +146,19 @@ forever:
     mov T2ov+1, #0
     clr TF2
     setb TR2
+    
+    ;Randomize button connected at P2.4
+    jb P2.4, $
+    
+    mov Seed+0, TH2
+    mov Seed+1, #0x01
+    mov Seed+2, #0x87
+    mov Seed+3, TL2
+    clr TR2
+    
+    jnb P2.4, Bridge_Random
+    ljmp forever
+    
 synch1:
 	mov a, T2ov+1
 	anl a, #0xfe
@@ -149,38 +208,38 @@ skip_this:
 	mov x+1, TH2
 	mov x+2, T2ov+0
 	mov x+3, T2ov+1
-	Load_y(45) ; One clock pulse is 1/22.1184MHz=45.21123ns
-	lcall mul32
 	
-	Load_y(10)
-	lcall div32
-	
-	Load_y(10)
-	lcall div32
-	
-	Load_y(144)
-	lcall mul32
-	
-	Load_y(100)
-	lcall div32
-	
-	Load_y(220)
-	lcall div32
-	
-	Load_y(10)
-	lcall div32
-	
-	Load_y(100)
-	lcall mul32
-	
-	Load_y(100)
-	lcall sub32
 	
 	; Convert the result to BCD and display on LCD
 	Set_Cursor(2, 1)
 	lcall hex2bcd
 	lcall Display_10_digit_BCD
     ljmp forever ; Repeat! 
+
+
+;Generates random number
+Random: 
+	; Dont worry about this, it is just some math that is good enough to randomize numbers enough for our purposes
+    mov x+0, Seed+0
+    mov x+1, Seed+1
+    mov x+2, Seed+2
+    mov x+3, Seed+3
+    Load_y(214013)
+    lcall mul32
+    Load_y(2531011)
+    lcall add32
+    mov Seed+0, x+0
+    mov Seed+1, x+1
+    mov Seed+2, x+2
+    mov Seed+3, x+3
+    
+    Set_Cursor(2, 1)
+	lcall hex2bcd
+	lcall Display_10_digit_BCD
+	lcall Timer0_ISR
+    ret
+    
+   
     
 
 end
