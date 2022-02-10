@@ -143,6 +143,7 @@ forever:
 	; Repeated Random time wait calls are here for show just for now
 	Set_Cursor(1, 1)
 	lcall Random
+	;wait random amount of time
     Wait_Milli_Seconds(Seed+0)
     Wait_Milli_Seconds(Seed+1)
     Wait_Milli_Seconds(Seed+2)
