@@ -5,6 +5,8 @@ $LIST
 org 0000H
    ljmp MyProgram
    
+org 0x000B
+	ljmp Timer0_ISR
 ; Timer/Counter 2 overflow interrupt vector
 org 0x002B
 	ljmp Timer2_ISR
@@ -15,6 +17,9 @@ x:   ds 4
 y:   ds 4
 bcd: ds 5
 T2ov: ds 2 ; 16-bit timer 2 overflow (to measure the period of very slow signals)
+Seed: ds 4
+p1Score: ds 3
+p2Score: ds 3
 
 BSEG
 mf: dbit 1
@@ -37,9 +42,24 @@ $NOLIST
 $include(LCD_4bit.inc) ; A library of LCD related functions and utility macros
 $LIST
 
+CLK           EQU 22118400 ; Microcontroller system crystal frequency in Hz
+TIMER0_RATE   EQU 1000     ; 2048Hz squarewave (peak amplitude of CEM-1203 speaker)
+TIMER0_RATE_HIGH EQU 4096
+TIMER0_RATE_LOW EQU 1000
+TIMER0_RELOAD EQU ((65536-(CLK/TIMER0_RATE)))
+TIMER0_RELOAD_HIGH EQU ((65536-(CLK/TIMER0_RATE_HIGH)))
+TIMER2_RATE   EQU 1000     ; 1000Hz, for a timer tick of 1ms
+;Timer0_Rate used to change pitch
+TIMER2_RELOAD EQU ((65536-(CLK/TIMER2_RATE)))
+
+cseg
+
+SOUND_OUT equ P1.1
+
+
 ;                     1234567890123456    <- This helps determine the location of the counter
-Initial_Message:  db 'Capacitance (nF):   ', 0
-Overflow_Str:    db 'Overflow      ', 0
+Initial_Message:  db 'P1          P2', 0
+Overflow_Str:    db '00           00', 0
 
 ; Sends 10-digit BCD number in bcd to the LCD
 Display_10_digit_BCD:
@@ -70,6 +90,40 @@ Timer2_ISR_done:
 	pop acc
 	reti
 
+Timer0_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD)
+	mov TL0, #low(TIMER0_RELOAD)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD)
+	mov RL0, #low(TIMER0_RELOAD)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+Timer0_HIGH_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_HIGH)
+	mov TL0, #low(TIMER0_RELOAD_HIGH)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_HIGH)
+	mov RL0, #low(TIMER0_RELOAD_HIGH)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+Timer0_ISR:
+	;clr TF0  ; According to the data sheet this is done for us already.
+	cpl SOUND_OUT ; Connect speaker to P1.1!
+	reti
+
 ;---------------------------------;
 ; Hardware initialization         ;
 ;---------------------------------;
@@ -90,6 +144,10 @@ MyProgram:
 	Set_Cursor(1, 1)
     Send_Constant_String(#Initial_Message)
     
+    lcall Timer0_Init
+    lcall InitTimer2
+
+    
 forever:
     ; synchronize with rising edge of the signal applied to pin P0.0
     clr TR2 ; Stop timer 2
@@ -99,6 +157,20 @@ forever:
     mov T2ov+1, #0
     clr TF2
     setb TR2
+    
+    ;Cycles
+    lcall One_Cycle
+    ;lcall One_Cycle
+    ;lcall One_Cycle
+    ;lcall One_Cycle
+    
+    mov Seed+0, TH2
+    mov Seed+1, #0x01
+    mov Seed+2, #0x87
+    mov Seed+3, TL2
+    clr TR2
+    
+    
 synch1:
 	mov a, T2ov+1
 	anl a, #0xfe
@@ -162,5 +234,75 @@ skip_this:
 	lcall Display_10_digit_BCD
     ljmp forever ; Repeat! 
     
+Random: 
+	; Dont worry about this, it is just some math that is good enough to randomize numbers enough for our purposes
+    mov x+0, Seed+0
+    mov x+1, Seed+1
+    mov x+2, Seed+2
+    mov x+3, Seed+3
+    Load_y(214013)
+    lcall mul32
+    Load_y(2531011)
+    lcall add32
+    mov Seed+0, x+0
+    mov Seed+1, x+1
+    mov Seed+2, x+2
+    mov Seed+3, x+3
+    ret
+    
+Wait_Random_Time:
+	Wait_Milli_Seconds(Seed+0)
+    Wait_Milli_Seconds(Seed+1)
+    Wait_Milli_Seconds(Seed+2)
+    Wait_Milli_Seconds(Seed+3)
+    Wait_Milli_Seconds(Seed+0)
+    Wait_Milli_Seconds(Seed+1)
+    Wait_Milli_Seconds(Seed+2)
+    Wait_Milli_Seconds(Seed+3)
+    Wait_Milli_Seconds(Seed+0)
+    Wait_Milli_Seconds(Seed+1)
+    Wait_Milli_Seconds(Seed+2)
+    Wait_Milli_Seconds(Seed+3)
+    Wait_Milli_Seconds(Seed+0)
+    Wait_Milli_Seconds(Seed+1)
+    Wait_Milli_Seconds(Seed+2)
+    Wait_Milli_Seconds(Seed+3)
+    Wait_Milli_Seconds(Seed+0)
+    Wait_Milli_Seconds(Seed+1)
+    Wait_Milli_Seconds(Seed+2)
+    Wait_Milli_Seconds(Seed+3)
+    Wait_Milli_Seconds(Seed+0)
+    Wait_Milli_Seconds(Seed+1)
+    Wait_Milli_Seconds(Seed+2)
+    Wait_Milli_Seconds(Seed+3)
+    Wait_Milli_Seconds(Seed+0)
+    Wait_Milli_Seconds(Seed+1)
+    Wait_Milli_Seconds(Seed+2)
+    Wait_Milli_Seconds(Seed+3)
+    Wait_Milli_Seconds(Seed+0)
+    Wait_Milli_Seconds(Seed+1)
+    Wait_Milli_Seconds(Seed+2)
+    Wait_Milli_Seconds(Seed+3)
+    ret    
+    
+Wait_Constant_Time:
+	Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    ret
+    
+One_Cycle:
+	lcall Wait_Random_Time
+    lcall Timer0_HIGH_Init
+    ;Wait for slap, if slapped, increment score
+    lcall Wait_Constant_Time ; waiting for players to slap
+    lcall Timer0_Init
+    ;Wait for slap, if slapped, decrement score
+    ret
 
 end
