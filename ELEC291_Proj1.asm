@@ -86,22 +86,17 @@ MyProgram:
     ; Initialize the hardware:
     mov SP, #7FH
     lcall Initialize_All
-<<<<<<< Updated upstream
     setb P0.0 ; Pin is used as input
-=======
     setb P2.0 ; Pin is used as input
     
     lcall Timer0_Init
     lcall InitTimer2
->>>>>>> Stashed changes
 
 	Set_Cursor(1, 1)
     Send_Constant_String(#Initial_Message)
     
 forever:
-<<<<<<< Updated upstream
     ; synchronize with rising edge of the signal applied to pin P0.0
-=======
 	; Repeated Random time wait calls are here for show just for now
 	;Set_Cursor(1, 1)
 	;lcall Random
@@ -136,8 +131,6 @@ forever:
 	;wait random amount of time
     lcall Wait_Random_Time
     
-    
->>>>>>> Stashed changes
     clr TR2 ; Stop timer 2
     mov TL2, #0
     mov TH2, #0
@@ -287,57 +280,34 @@ Wait_Constant_Time:
     
 Calculate_Capacitance_P20: ; Left one
 	
+	; Make sure [T2ov+1, T2ov+2, TH2, TL2]!=0
+	mov a, TL2
+	orl a, TH2
+	orl a, T2ov+0
+	orl a, T2ov+1
+	jz no_signal
+	; Using integer math, convert the period to frequency:
 	mov x+0, TL2
 	mov x+1, TH2
 	mov x+2, T2ov+0
 	mov x+3, T2ov+1
-	
->>>>>>> Stashed changes
 	Load_y(45) ; One clock pulse is 1/22.1184MHz=45.21123ns
 	lcall mul32
-	
-	Load_y(10)
+	load_y(100) ;mult by 1.44 by mult 144/100
 	lcall div32
-	
-	Load_y(10)
-	lcall div32
-	
-	Load_y(144)
+	load_y(144)	
 	lcall mul32
-	
-	Load_y(100)
+	load_y(3000) ;since i used 2 1k resistors
 	lcall div32
-	
-	Load_y(220)
-	lcall div32
-	
-	Load_y(10)
-	lcall div32
-	
-	Load_y(100)
-	lcall mul32
-	
-	Load_y(100)
-	lcall sub32
-	
-<<<<<<< Updated upstream
-=======
-	Load_y(95)
-	lcall sub32
-	
-	
->>>>>>> Stashed changes
+
 	; Convert the result to BCD and display on LCD
-	Set_Cursor(2, 1)
+	Set_Cursor(2, 3)
 	lcall hex2bcd
 	lcall Display_10_digit_BCD
-<<<<<<< Updated upstream
     ljmp forever ; Repeat! 
 =======
 	ret
 
 Calculate_Capacitance_P21: ; Right one
->>>>>>> Stashed changes
-    
 
 end
