@@ -38,8 +38,8 @@ $include(LCD_4bit.inc) ; A library of LCD related functions and utility macros
 $LIST
 
 ;                     1234567890123456    <- This helps determine the location of the counter
-Initial_Message:  db 'Capacitance: nF', 0
-No_Signal_Str:    db 'No signal      ', 0
+Initial_Message:  db 'Capacitance (nF):   ', 0
+Overflow_Str:    db 'Overflow      ', 0
 
 ; Sends 10-digit BCD number in bcd to the LCD
 Display_10_digit_BCD:
@@ -87,50 +87,12 @@ MyProgram:
     mov SP, #7FH
     lcall Initialize_All
     setb P0.0 ; Pin is used as input
-    setb P2.0 ; Pin is used as input
-    
-    lcall Timer0_Init
-    lcall InitTimer2
-
+    setb P2.1
 	Set_Cursor(1, 1)
     Send_Constant_String(#Initial_Message)
     
 forever:
     ; synchronize with rising edge of the signal applied to pin P0.0
-	; Repeated Random time wait calls are here for show just for now
-	;Set_Cursor(1, 1)
-	;lcall Random
-	;wait random amount of time
-	
-	;one cycle
-	lcall Calculate_Capacitance_P21 
-    lcall One_Cycle
-    lcall One_Cycle
-    lcall One_Cycle
-    lcall One_Cycle
-    lcall One_Cycle
-    lcall One_Cycle
-    lcall One_Cycle
-    lcall One_Cycle
-    lcall One_Cycle
-    
-    
-    ;lcall Calculate_Capacitance_P21 
-    ;change
-    
-    lcall Random
-	;wait random amount of time
-    lcall Wait_Random_Time
-    lcall Random
-	;wait random amount of time
-    lcall Wait_Random_Time
-    lcall Random
-	;wait random amount of time
-    lcall Wait_Random_Time
-    lcall Random
-	;wait random amount of time
-    lcall Wait_Random_Time
-    
     clr TR2 ; Stop timer 2
     mov TL2, #0
     mov TH2, #0
@@ -142,13 +104,12 @@ synch1:
 	mov a, T2ov+1
 	anl a, #0xfe
 	jnz no_signal ; If the count is larger than 0x01ffffffff*45ns=1.16s, we assume there is no signal
-    jb P2.0, synch1
+    jb P0.0, synch1
 synch2:    
 	mov a, T2ov+1
 	anl a, #0xfe
 	jnz no_signal
-    jnb P2.0, synch2
-    
+    jnb P0.0, synch2
     ; Measure the period of the signal applied to pin P0.0
     clr TR2
     mov TL2, #0
@@ -161,125 +122,21 @@ measure1:
 	mov a, T2ov+1
 	anl a, #0xfe
 	jnz no_signal 
-    jb P2.0, measure1
+    jb P0.0, measure1
 measure2:    
 	mov a, T2ov+1
 	anl a, #0xfe
 	jnz no_signal
-    jnb P2.0, measure2
+    jnb P0.0, measure2
     clr TR2 ; Stop timer 2, [T2ov+1, T2ov+0, TH2, TL2] * 45.21123ns is the period
 
 	sjmp skip_this
 no_signal:	
 	Set_Cursor(2, 1)
-    Send_Constant_String(#No_Signal_Str)
+    Send_Constant_String(#Overflow_Str)
     ljmp forever ; Repeat! 
 skip_this:
 
-	; Make sure [T2ov+1, T2ov+2, TH2, TL2]!=0
-	mov a, TL2
-	orl a, TH2
-	orl a, T2ov+0
-	orl a, T2ov+1
-	jz no_signal
-	; Using integer math, convert the period to frequency:
-	mov x+0, TL2
-	mov x+1, TH2
-	mov x+2, T2ov+0
-	mov x+3, T2ov+1
-<<<<<<< Updated upstream
-=======
-	
-	
-	; Convert the result to BCD and display on LCD
-	;Set_Cursor(2, 1)
-	;lcall hex2bcd
-	;lcall Display_10_digit_BCD
-    ljmp forever ; Repeat! 
-
-
-;Generates random number
-Random: 
-	; Dont worry about this, it is just some math that is good enough to randomize numbers enough for our purposes
-    mov x+0, Seed+0
-    mov x+1, Seed+1
-    mov x+2, Seed+2
-    mov x+3, Seed+3
-    Load_y(214013)
-    lcall mul32
-    Load_y(2531011)
-    lcall add32
-    mov Seed+0, x+0
-    mov Seed+1, x+1
-    mov Seed+2, x+2
-    mov Seed+3, x+3
-    
-    ;Set_Cursor(1, 3)
-	;lcall hex2bcd
-	;lcall Display_10_digit_BCD
-	lcall Timer0_ISR ;Why no alarm trigger?
-    ret
-
-One_Cycle:
-	lcall Wait_Random_Time
-    lcall Timer0_HIGH_Init
-    ;Wait for slap, if slapped, increment score
-    lcall Wait_Constant_Time ; waiting for players to slap
-    lcall Timer0_Init
-    ;Wait for slap, if slapped, decrement score
-    ret
-    
-Inc_Score:
-	
- 
-Wait_Random_Time:
-	Wait_Milli_Seconds(Seed+0)
-    Wait_Milli_Seconds(Seed+1)
-    Wait_Milli_Seconds(Seed+2)
-    Wait_Milli_Seconds(Seed+3)
-    Wait_Milli_Seconds(Seed+0)
-    Wait_Milli_Seconds(Seed+1)
-    Wait_Milli_Seconds(Seed+2)
-    Wait_Milli_Seconds(Seed+3)
-    Wait_Milli_Seconds(Seed+0)
-    Wait_Milli_Seconds(Seed+1)
-    Wait_Milli_Seconds(Seed+2)
-    Wait_Milli_Seconds(Seed+3)
-    Wait_Milli_Seconds(Seed+0)
-    Wait_Milli_Seconds(Seed+1)
-    Wait_Milli_Seconds(Seed+2)
-    Wait_Milli_Seconds(Seed+3)
-    Wait_Milli_Seconds(Seed+0)
-    Wait_Milli_Seconds(Seed+1)
-    Wait_Milli_Seconds(Seed+2)
-    Wait_Milli_Seconds(Seed+3)
-    Wait_Milli_Seconds(Seed+0)
-    Wait_Milli_Seconds(Seed+1)
-    Wait_Milli_Seconds(Seed+2)
-    Wait_Milli_Seconds(Seed+3)
-    Wait_Milli_Seconds(Seed+0)
-    Wait_Milli_Seconds(Seed+1)
-    Wait_Milli_Seconds(Seed+2)
-    Wait_Milli_Seconds(Seed+3)
-    Wait_Milli_Seconds(Seed+0)
-    Wait_Milli_Seconds(Seed+1)
-    Wait_Milli_Seconds(Seed+2)
-    Wait_Milli_Seconds(Seed+3)
-    ret
-    
-Wait_Constant_Time:
-	Wait_Milli_Seconds(#255)
-    Wait_Milli_Seconds(#255)
-    Wait_Milli_Seconds(#255)
-    Wait_Milli_Seconds(#255)
-    Wait_Milli_Seconds(#255)
-    Wait_Milli_Seconds(#255)
-    Wait_Milli_Seconds(#255)
-    Wait_Milli_Seconds(#255)
-    ret
-    
-Calculate_Capacitance_P20: ; Left one
-	
 	; Make sure [T2ov+1, T2ov+2, TH2, TL2]!=0
 	mov a, TL2
 	orl a, TH2
@@ -297,17 +154,83 @@ Calculate_Capacitance_P20: ; Left one
 	lcall div32
 	load_y(144)	
 	lcall mul32
-	load_y(3000) ;since i used 2 1k resistors
+	load_y(1200) ;since i used 2 1k resistors
 	lcall div32
 
 	; Convert the result to BCD and display on LCD
-	Set_Cursor(2, 3)
+	Set_Cursor(2, 4)
+	lcall hex2bcd
+	lcall Display_10_digit_BCD
+    ljmp forever2 ; Repeat! 
+    
+    forever2:
+    ; synchronize with rising edge of the signal applied to pin P0.0
+    clr TR2 ; Stop timer 2
+    mov TL2, #0
+    mov TH2, #0
+    mov T2ov+0, #0
+    mov T2ov+1, #0
+    clr TF2
+    setb TR2
+synch1b:
+	mov a, T2ov+1
+	anl a, #0xfe
+	jnz no_signal_jump ; If the count is larger than 0x01ffffffff*45ns=1.16s, we assume there is no signal
+    jb P2.1, synch1b
+synch2b:    
+	mov a, T2ov+1
+	anl a, #0xfe
+	jnz no_signal_jump
+    jnb P2.1, synch2b
+    ; Measure the period of the signal applied to pin P0.0
+    clr TR2
+    mov TL2, #0
+    mov TH2, #0
+    mov T2ov+0, #0
+    mov T2ov+1, #0
+    clr TF2
+    setb TR2 ; Start timer 2
+measure1b:
+	mov a, T2ov+1
+	anl a, #0xfe
+	jnz no_signal_jump
+    jb P2.1, measure1b
+measure2b:    
+	mov a, T2ov+1
+	anl a, #0xfe
+	jnz no_signal_jump
+    jnb P2.1, measure2b
+    clr TR2 ; Stop timer 2, [T2ov+1, T2ov+0, TH2, TL2] * 45.21123ns is the period
+
+	sjmp skip_this2
+
+ no_signal_jump:
+	ljmp no_signal
+
+skip_this2:
+	; Make sure [T2ov+1, T2ov+2, TH2, TL2]!=0
+	mov a, TL2
+	orl a, TH2
+	orl a, T2ov+0
+	orl a, T2ov+1
+	jz no_signal_jump
+	; Using integer math, convert the period to frequency:
+	mov x+0, TL2
+	mov x+1, TH2
+	mov x+2, T2ov+0
+	mov x+3, T2ov+1
+	Load_y(45) ; One clock pulse is 1/22.1184MHz=45.21123ns
+	lcall mul32
+	load_y(100) ;mult by 1.44 by mult 144/100
+	lcall div32
+	load_y(144)	
+	lcall mul32
+	load_y(1200) ;since i used 2 1k resistors
+	lcall div32
+
+	; Convert the result to BCD and display on LCD
+	Set_Cursor(1, 4)
 	lcall hex2bcd
 	lcall Display_10_digit_BCD
     ljmp forever ; Repeat! 
-=======
-	ret
-
-Calculate_Capacitance_P21: ; Right one
-
 end
