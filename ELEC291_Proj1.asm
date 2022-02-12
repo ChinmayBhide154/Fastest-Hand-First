@@ -52,6 +52,10 @@ TIMER2_RATE   EQU 1000     ; 1000Hz, for a timer tick of 1ms
 ;Timer0_Rate used to change pitch
 TIMER2_RELOAD EQU ((65536-(CLK/TIMER2_RATE)))
 
+;Music Frequencies
+TIMER0_RATE_A   EQU 440 
+
+
 cseg
 
 SOUND_OUT equ P1.1
@@ -60,6 +64,9 @@ SOUND_OUT equ P1.1
 ;                     1234567890123456    <- This helps determine the location of the counter
 Initial_Message:  db 'P1          P2', 0
 Overflow_Str:    db '00           00', 0
+Player_One_Text: db 'Player 1: ', 0
+Player_Two_Text: db 'Player 2: ',0
+
 
 ; Sends 10-digit BCD number in bcd to the LCD
 Display_10_digit_BCD:
@@ -158,11 +165,7 @@ forever:
     clr TF2
     setb TR2
     
-    ;Cycles
     lcall One_Cycle
-    ;lcall One_Cycle
-    ;lcall One_Cycle
-    ;lcall One_Cycle
     
     mov Seed+0, TH2
     mov Seed+1, #0x01
@@ -252,7 +255,9 @@ Random:
     
 Wait_Random_Time:
 	Wait_Milli_Seconds(Seed+0)
+	;Inc_Capacitance
     Wait_Milli_Seconds(Seed+1)
+    ;Inc_Capacitance ... so on in between each random wait time
     Wait_Milli_Seconds(Seed+2)
     Wait_Milli_Seconds(Seed+3)
     Wait_Milli_Seconds(Seed+0)
@@ -287,10 +292,15 @@ Wait_Random_Time:
     
 Wait_Constant_Time:
 	Wait_Milli_Seconds(#255)
+	;Dec_Capacitance
     Wait_Milli_Seconds(#255)
+    ;Dec_Capacitance
     Wait_Milli_Seconds(#255)
+    ;Dec_Capacitance
     Wait_Milli_Seconds(#255)
+    ;Dec_Capacitance
     Wait_Milli_Seconds(#255)
+    ;Dec_Capacitance ... and so o
     Wait_Milli_Seconds(#255)
     Wait_Milli_Seconds(#255)
     Wait_Milli_Seconds(#255)
@@ -304,5 +314,33 @@ One_Cycle:
     lcall Timer0_Init
     ;Wait for slap, if slapped, decrement score
     ret
+    
+Inc_Capacitance:
+; pseudocode:
+; 	if P1 capacitance > 50 (Can replace this number), increment P1
+;   if P2 capacitance > 50 , increment P2
+;	lcall compareScores
+;	ret
+
+Dec_Capacitance:
+; pseudocode:
+; 	if P1 capacitance > 50 (Can replace this number), decrement P1
+;   if P2 capacitance > 50 , decrement P2
+;	ret
+
+Compare_Scores:
+;   if p1Score == 5 , ljmp P1_Wins
+;	if p2Score == 5 , ljmp P2_Wins
+;		
+
+P1_Wins:
+; Display some sort of message
+
+P2_Wins:
+; display some sort of message
+;
+Play_Music:
+
+
 
 end
