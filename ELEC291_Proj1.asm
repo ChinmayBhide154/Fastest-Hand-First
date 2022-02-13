@@ -20,6 +20,7 @@ T2ov: ds 2 ; 16-bit timer 2 overflow (to measure the period of very slow signals
 Seed: ds 4
 p1Score: ds 3
 p2Score: ds 3
+capacitance: ds 4
 
 
 BSEG
@@ -236,9 +237,10 @@ skip_this:
 	load_y(1200) ;since i used 2 1k resistors
 	lcall div32
 	
+	;b holds the capacitance
 	mov b, x
+	mov capacitance, b
 
-	
 	;comparing capacitance with 200 nF
 	;Set_Cursor(2, 1)
 	;lcall hex2bcd
@@ -249,7 +251,7 @@ skip_this:
     ljmp forever ; Repeat! 
     
 Inc_Score:
-	load_x(b)
+	load_x(capacitance)
 	load_y(200)
 	lcall x_gt_y
 	;if the capacitance is greater than 200, mf will be set to 1
@@ -276,7 +278,7 @@ Bridge_Forever:
 ;	ret
 
 Dec_Score:
-	load_x(b)
+	load_x(capacitance)
 	load_y(200)
 	lcall x_gt_y
 	;if the capacitance is greater than 200, mf will be set to 1
@@ -287,6 +289,7 @@ Dec_Score:
 Sub_Score:
 	dec p1Score
 	load_x(p1Score)
+	
 	Set_Cursor(2, 1)
 	lcall hex2bcd
 	Display_BCD(p1Score)
