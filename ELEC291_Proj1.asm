@@ -59,6 +59,8 @@ TIMER0_RATE_A   EQU 440
 cseg
 
 SOUND_OUT equ P1.1
+Player_One equ P2.1
+Player_Two equ P0.0
 
 
 ;                     1234567890123456    <- This helps determine the location of the counter
@@ -148,12 +150,15 @@ MyProgram:
     mov SP, #7FH
     lcall Initialize_All
     setb P0.0 ; Pin is used as input
+    
+    mov p1Score, #0x00
+    mov p2Score, #0x00
+    
 	Set_Cursor(1, 1)
     Send_Constant_String(#Initial_Message)
     
     lcall Timer0_Init
     lcall InitTimer2
-
     
 forever:
     ; synchronize with rising edge of the signal applied to pin P0.0
@@ -172,8 +177,7 @@ forever:
     mov Seed+2, #0x87
     mov Seed+3, TL2
     clr TR2
-    
-    
+     
 synch1:
 	mov a, T2ov+1
 	anl a, #0xfe
@@ -231,12 +235,51 @@ skip_this:
 	load_y(1200) ;since i used 2 1k resistors
 	lcall div32
 
-	; Convert the result to BCD and display on LCD
+	;comparing capacitance with 200 nF
+	;Set_Cursor(2, 1)
+	;lcall hex2bcd
+	;lcall Display_10_digit_BCD
+    ljmp forever ; Repeat! 
+    
+Inc_Score:
+	load_y(200)
+	lcall x_gt_y
+	;if the capacitance is greater than 200, mf will be set to 1
+	
+	jnb mf, Bridge_Forever
+	inc p1Score
 	Set_Cursor(2, 1)
 	lcall hex2bcd
 	lcall Display_10_digit_BCD
-    ljmp forever ; Repeat! 
-    
+	
+	ljmp forever		
+
+Bridge_Forever:
+	ljmp forever
+	
+; pseudocode:
+; 	if P1 capacitance > 50 (Can replace this number), increment P1
+;   if P2 capacitance > 50 , increment P2
+;	lcall compareScores
+;	ret
+
+Dec_Score:
+	load_y(200)
+	lcall x_gt_y
+	;if the capacitance is greater than 200, mf will be set to 1
+	
+	jnb mf, Bridge_Forever
+	dec p1Score
+	Set_Cursor(2, 1)
+	lcall hex2bcd
+	lcall Display_10_digit_BCD
+	
+	ljmp forever
+; pseudocode:
+; 	if P1 capacitance > 50 (Can replace this number), decrement P1
+;   if P2 capacitance > 50 , decrement P2
+;	ret    
+
 Random: 
 	; Dont worry about this, it is just some math that is good enough to randomize numbers enough for our purposes
     mov x+0, Seed+0
@@ -255,81 +298,89 @@ Random:
     
 Wait_Random_Time:
 	Wait_Milli_Seconds(Seed+0)
-	;Inc_Capacitance
+	lcall Dec_Score
     Wait_Milli_Seconds(Seed+1)
-    ;Inc_Capacitance ... so on in between each random wait time
+    ;Inc_Score ... so on in between each random wait time
+    lcall Dec_Score
     Wait_Milli_Seconds(Seed+2)
+    lcall Dec_Score
     Wait_Milli_Seconds(Seed+3)
+    lcall Dec_Score
     Wait_Milli_Seconds(Seed+0)
+    lcall Dec_Score
     Wait_Milli_Seconds(Seed+1)
+    lcall Dec_Score
     Wait_Milli_Seconds(Seed+2)
+    lcall Dec_Score
     Wait_Milli_Seconds(Seed+3)
+    lcall Dec_Score
     Wait_Milli_Seconds(Seed+0)
+    lcall Dec_Score
     Wait_Milli_Seconds(Seed+1)
+    lcall Dec_Score
     Wait_Milli_Seconds(Seed+2)
+    lcall Dec_Score
     Wait_Milli_Seconds(Seed+3)
+    lcall Dec_Score
     Wait_Milli_Seconds(Seed+0)
+	lcall Dec_Score
     Wait_Milli_Seconds(Seed+1)
+    ;Inc_Score ... so on in between each random wait time
+    lcall Dec_Score
     Wait_Milli_Seconds(Seed+2)
+    lcall Dec_Score
     Wait_Milli_Seconds(Seed+3)
+    lcall Dec_Score
     Wait_Milli_Seconds(Seed+0)
+	lcall Dec_Score
     Wait_Milli_Seconds(Seed+1)
+    ;Inc_Score ... so on in between each random wait time
+    lcall Dec_Score
     Wait_Milli_Seconds(Seed+2)
+    lcall Dec_Score
     Wait_Milli_Seconds(Seed+3)
+    lcall Dec_Score
     Wait_Milli_Seconds(Seed+0)
+	lcall Dec_Score
     Wait_Milli_Seconds(Seed+1)
+    ;Inc_Score ... so on in between each random wait time
+    lcall Dec_Score
     Wait_Milli_Seconds(Seed+2)
+    lcall Dec_Score
     Wait_Milli_Seconds(Seed+3)
-    Wait_Milli_Seconds(Seed+0)
-    Wait_Milli_Seconds(Seed+1)
-    Wait_Milli_Seconds(Seed+2)
-    Wait_Milli_Seconds(Seed+3)
-    Wait_Milli_Seconds(Seed+0)
-    Wait_Milli_Seconds(Seed+1)
-    Wait_Milli_Seconds(Seed+2)
-    Wait_Milli_Seconds(Seed+3)
+    lcall Dec_Score
     ret    
     
 Wait_Constant_Time:
 	Wait_Milli_Seconds(#255)
-	;Dec_Capacitance
+	lcall Inc_Score
     Wait_Milli_Seconds(#255)
-    ;Dec_Capacitance
+    lcall Inc_Score
     Wait_Milli_Seconds(#255)
-    ;Dec_Capacitance
+    lcall Inc_Score
     Wait_Milli_Seconds(#255)
-    ;Dec_Capacitance
+    lcall Inc_Score
     Wait_Milli_Seconds(#255)
-    ;Dec_Capacitance ... and so o
+    lcall Inc_Score
     Wait_Milli_Seconds(#255)
+    lcall Inc_Score
     Wait_Milli_Seconds(#255)
+    lcall Inc_Score
     Wait_Milli_Seconds(#255)
     ret
     
 One_Cycle:
-	lcall Wait_Random_Time
+	lcall Wait_Random_Time ; in here, we are continuously checking if someone slaps, if they do, we decrement
     lcall Timer0_HIGH_Init
     ;Wait for slap, if slapped, increment score
-    lcall Wait_Constant_Time ; waiting for players to slap
+    lcall Wait_Constant_Time ; in here, we are continuously checking if someone slaps, if they do we increment
     lcall Timer0_Init
     ;Wait for slap, if slapped, decrement score
     ret
     
-Inc_Capacitance:
-; pseudocode:
-; 	if P1 capacitance > 50 (Can replace this number), increment P1
-;   if P2 capacitance > 50 , increment P2
-;	lcall compareScores
-;	ret
-
-Dec_Capacitance:
-; pseudocode:
-; 	if P1 capacitance > 50 (Can replace this number), decrement P1
-;   if P2 capacitance > 50 , decrement P2
-;	ret
-
 Compare_Scores:
 ;   if p1Score == 5 , ljmp P1_Wins
+	
 ;	if p2Score == 5 , ljmp P2_Wins
 ;		
 
