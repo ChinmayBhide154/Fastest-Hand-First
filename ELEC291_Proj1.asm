@@ -21,6 +21,7 @@ Seed: ds 4
 p1Score: ds 3
 p2Score: ds 3
 
+
 BSEG
 mf: dbit 1
 
@@ -234,6 +235,8 @@ skip_this:
 	lcall mul32
 	load_y(1200) ;since i used 2 1k resistors
 	lcall div32
+	
+	mov b, x
 
 	
 	;comparing capacitance with 200 nF
@@ -246,6 +249,7 @@ skip_this:
     ljmp forever ; Repeat! 
     
 Inc_Score:
+	load_x(b)
 	load_y(200)
 	lcall x_gt_y
 	;if the capacitance is greater than 200, mf will be set to 1
@@ -258,7 +262,7 @@ Add_Score:
 	load_x(p1Score)
 	Set_Cursor(2, 1)
 	lcall hex2bcd
-	lcall Display_10_digit_BCD
+	Display_BCD(p1Score)
 	
 	ljmp forever		
 
@@ -272,6 +276,7 @@ Bridge_Forever:
 ;	ret
 
 Dec_Score:
+	load_x(b)
 	load_y(200)
 	lcall x_gt_y
 	;if the capacitance is greater than 200, mf will be set to 1
@@ -284,7 +289,7 @@ Sub_Score:
 	load_x(p1Score)
 	Set_Cursor(2, 1)
 	lcall hex2bcd
-	lcall Display_10_digit_BCD
+	Display_BCD(p1Score)
 	
 	ljmp forever
 ; pseudocode:
