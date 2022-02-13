@@ -170,7 +170,7 @@ forever:
     clr TF2
     setb TR2
     
-    lcall One_Cycle
+    ;lcall One_Cycle
     
     mov Seed+0, TH2
     mov Seed+1, #0x01
@@ -235,10 +235,14 @@ skip_this:
 	load_y(1200) ;since i used 2 1k resistors
 	lcall div32
 
+	
 	;comparing capacitance with 200 nF
 	;Set_Cursor(2, 1)
 	;lcall hex2bcd
 	;lcall Display_10_digit_BCD
+	lcall One_Cycle
+	
+	
     ljmp forever ; Repeat! 
     
 Inc_Score:
@@ -246,8 +250,12 @@ Inc_Score:
 	lcall x_gt_y
 	;if the capacitance is greater than 200, mf will be set to 1
 	
-	jnb mf, Bridge_Forever
+	jb mf, Add_Score
+	ret
+	
+Add_Score:
 	inc p1Score
+	load_x(p1Score)
 	Set_Cursor(2, 1)
 	lcall hex2bcd
 	lcall Display_10_digit_BCD
@@ -268,8 +276,12 @@ Dec_Score:
 	lcall x_gt_y
 	;if the capacitance is greater than 200, mf will be set to 1
 	
-	jnb mf, Bridge_Forever
+	jb mf, Sub_Score
+	ret
+	
+Sub_Score:
 	dec p1Score
+	load_x(p1Score)
 	Set_Cursor(2, 1)
 	lcall hex2bcd
 	lcall Display_10_digit_BCD
