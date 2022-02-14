@@ -15,6 +15,8 @@ x:   ds 4
 y:   ds 4
 bcd: ds 5
 T2ov: ds 2 ; 16-bit timer 2 overflow (to measure the period of very slow signals)
+p1score: ds 1
+p2score: ds 1
 
 BSEG
 mf: dbit 1
@@ -38,7 +40,7 @@ $include(LCD_4bit.inc) ; A library of LCD related functions and utility macros
 $LIST
 
 ;                     1234567890123456    <- This helps determine the location of the counter
-Initial_Message:  db 'Capacitance (nF):   ', 0
+Initial_Message:  db  'P1		 P2', 0
 Overflow_Str:    db 'Overflow      ', 0
 
 ; Sends 10-digit BCD number in bcd to the LCD
@@ -90,6 +92,9 @@ MyProgram:
     setb P2.1
 	Set_Cursor(1, 1)
     Send_Constant_String(#Initial_Message)
+
+	mov p1score, #0
+	mov p2score, #0
     
 forever:
     ; synchronize with rising edge of the signal applied to pin P0.0
@@ -150,20 +155,33 @@ skip_this:
 	mov x+3, T2ov+1
 	Load_y(45) ; One clock pulse is 1/22.1184MHz=45.21123ns
 	lcall mul32
-	load_y(100) ;mult by 1.44 by mult 144/100
-	lcall div32
-	load_y(144)	
+	load_y(10) ;mult by 1.44 by mult 144/100
+	;lcall div32
+	;load_y(144)	
 	lcall mul32
-	load_y(1200) ;since i used 2 1k resistors
-	lcall div32
-
-	; Convert the result to BCD and display on LCD
-	Set_Cursor(2, 4)
-	lcall hex2bcd
-	lcall Display_10_digit_BCD
-    ljmp forever2 ; Repeat! 
-    
-    forever2:
+	;load_y(120) ;since i used 2 1k resistors
+	;lcall div32
+	lcall Inc_Score
+	ljmp forever2
+Inc_Score:
+	Set_Cursor(2,1)
+	Display_BCD(p1score)
+	clr mf
+	load_y(900000)
+	lcall x_gt_y
+	jb mf, Add_Score_p1
+	ret
+Add_Score_p1:
+	clr mf
+	clr a
+	mov a, p1score
+	add a, #0x01
+	da a
+	mov p1score, a
+	Set_Cursor(2, 1)
+	Display_BCD(p1score)
+    ret
+forever2:
     ; synchronize with rising edge of the signal applied to pin P0.0
     clr TR2 ; Stop timer 2
     mov TL2, #0
@@ -221,16 +239,32 @@ skip_this2:
 	mov x+3, T2ov+1
 	Load_y(45) ; One clock pulse is 1/22.1184MHz=45.21123ns
 	lcall mul32
-	load_y(100) ;mult by 1.44 by mult 144/100
-	lcall div32
-	load_y(144)	
+	;load_y(100) ;mult by 1.44 by mult 144/100
+	;lcall div32
+	;load_y(144)	
+	;lcall mul32
+	;load_y(120) ;since i used 2 1k resistors
+	;lcall div32
+	load_y(10)
 	lcall mul32
-	load_y(1200) ;since i used 2 1k resistors
-	lcall div32
-
-	; Convert the result to BCD and display on LCD
-	Set_Cursor(1, 4)
-	lcall hex2bcd
-	lcall Display_10_digit_BCD
-    ljmp forever ; Repeat! 
+	lcall Inc_Score2
+	ljmp forever
+Inc_Score2:
+	Set_Cursor(2, 14)
+	Display_BCD(p2score)
+	clr mf
+	load_y(700000)
+	lcall x_gt_y
+	jb mf, Add_Score_p2
+	ret
+Add_Score_p2:
+	clr mf
+	clr a
+	mov a, p2score
+	add a, #0x01
+	da a
+	mov p2score, a
+	Set_Cursor(2, 14)
+	Display_BCD(p2score)
+    ret
 end
