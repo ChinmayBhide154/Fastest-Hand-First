@@ -18,8 +18,8 @@ y:   ds 4
 bcd: ds 5
 T2ov: ds 2 ; 16-bit timer 2 overflow (to measure the period of very slow signals)
 Seed: ds 4
-p1Score: ds 3
-p2Score: ds 3
+p1Score: ds 1
+p2Score: ds 1
 capacitance: ds 4
 
 
@@ -153,8 +153,8 @@ MyProgram:
     lcall Initialize_All
     setb P0.0 ; Pin is used as input
     
-    mov p1Score, #0x00
-    mov p2Score, #0x00
+    mov p1Score, #0
+    mov p2Score, #0
     
 	Set_Cursor(1, 1)
     Send_Constant_String(#Initial_Message)
@@ -224,22 +224,12 @@ skip_this:
 	orl a, T2ov+1
 	jz no_signal
 	; Using integer math, convert the period to frequency:
-	mov x+0, TL2
-	mov x+1, TH2
-	mov x+2, T2ov+0
-	mov x+3, T2ov+1
-	Load_y(45) ; One clock pulse is 1/22.1184MHz=45.21123ns
-	lcall mul32
-	load_y(100) ;mult by 1.44 by mult 144/100
-	lcall div32
-	load_y(144)	
-	lcall mul32
-	load_y(1200) ;since i used 2 1k resistors
-	lcall div32
+
+	lcall Calculate_Capacitance
 	
-	;b holds the capacitance
-	mov b, x
-	mov capacitance, b
+	
+	;mov b, x
+	;mov capacitance, b
 
 	;comparing capacitance with 200 nF
 	;Set_Cursor(2, 1)
@@ -248,11 +238,16 @@ skip_this:
 	lcall One_Cycle
 	
 	
-    ljmp forever ; Repeat! 
+    ljmp skip_this ; Repeat! 
     
 Inc_Score:
-	load_x(capacitance)
-	load_y(200)
+	;load_x(capacitance)
+	lcall Calculate_Capacitance
+	;mov x+0, capacitance+0
+	;mov x+1, capacitance+1
+	;mov x+2, capacitance+2
+	;mov x+3, capacitance+3
+	load_y(120)
 	lcall x_gt_y
 	;if the capacitance is greater than 200, mf will be set to 1
 	
@@ -260,13 +255,21 @@ Inc_Score:
 	ret
 	
 Add_Score:
-	inc p1Score
-	load_x(p1Score)
+	clr mf
+	;inc p1Score
+	mov x+0, p1Score+0
+	mov x+1, #0
+	mov x+2, #0
+	mov x+3, #0
 	Set_Cursor(2, 1)
-	lcall hex2bcd
+	mov a, p1Score
+	add a, #0x01
+	da a
+	mov p1Score, a
+	;da x
 	Display_BCD(p1Score)
 	
-	ljmp forever		
+	ljmp skip_this		
 
 Bridge_Forever:
 	ljmp forever
@@ -278,23 +281,40 @@ Bridge_Forever:
 ;	ret
 
 Dec_Score:
-	load_x(capacitance)
-	load_y(200)
+	lcall Calculate_Capacitance
+	;mov x+0, capacitance+0
+	;mov x+1, capacitance+1
+	;mov x+2, capacitance+2
+	;mov x+3, capacitance+3
+	load_y(120)
 	lcall x_gt_y
 	;if the capacitance is greater than 200, mf will be set to 1
+	
+	
 	
 	jb mf, Sub_Score
 	ret
 	
 Sub_Score:
-	dec p1Score
-	load_x(p1Score)
+	clr mf
+	;dec p1Score
+	
+	mov x+0, p1Score+0
+	mov x+1, #0
+	mov x+2, #0
+	mov x+3, #0
+	;load_x(p1Score)
+	mov a, p1Score
+	add a, #0x99
+	da a
+	mov p1Score, a
+	
 	
 	Set_Cursor(2, 1)
-	lcall hex2bcd
+	;lcall hex2bcd
 	Display_BCD(p1Score)
 	
-	ljmp forever
+	ljmp skip_this
 ; pseudocode:
 ; 	if P1 capacitance > 50 (Can replace this number), decrement P1
 ;   if P2 capacitance > 50 , decrement P2
@@ -410,7 +430,30 @@ P1_Wins:
 P2_Wins:
 ; display some sort of message
 ;
-Play_Music:
+Start_Screen:
+
+Calculate_Capacitance:
+	mov x+0, TL2
+	mov x+1, TH2
+	mov x+2, T2ov+0
+	mov x+3, T2ov+1
+	
+	load_y(45) ; One clock pulse is 1/22.1184MHz=45.21123ns
+	lcall mul32
+	load_y(100) ;mult by 1.44 by mult 144/100
+	lcall div32
+	load_y(144)	
+	lcall mul32
+	load_y(1200) ;since i used 2 1k resistors
+	lcall div32
+	
+	
+	mov capacitance+0, x+0
+	mov capacitance+1, x+1
+	mov capacitance+2, x+2
+	mov capacitance+3, x+3
+	ret
+	
 
 
 

@@ -16,11 +16,11 @@
 0038             18   bcd: ds 5
 003D             19   T2ov: ds 2 ; 16-bit timer 2 overflow (to measure the period of very slow signals)
 003F             20   Seed: ds 4
-0043             21   p1Score: ds 3
-0046             22   p2Score: ds 3
-0049             23   capacitance: ds 4
-004D             24   
-004D             25   
+0043             21   p1Score: ds 1
+0044             22   p2Score: ds 1
+0045             23   capacitance: ds 4
+0049             24   
+0049             25   
 0000             26   BSEG
 0000             27   mf: dbit 1
 0001             28   
@@ -173,8 +173,8 @@
 042F 120423     153       lcall Initialize_All
 0432 D280       154       setb P0.0 ; Pin is used as input
 0434            155       
-0434 754300     156       mov p1Score, #0x00
-0437 754600     157       mov p2Score, #0x00
+0434 754300     156       mov p1Score, #0
+0437 754400     157       mov p2Score, #0
 043A            158       
 043A C0E0       159            push acc
 043C 7401       159            mov a, #1
@@ -266,340 +266,371 @@
 04DB 453E       224            orl a, T2ov+1
 04DD 60D7       225            jz no_signal
 04DF            226            ; Using integer math, convert the period to frequency:
-04DF 85CC30     227            mov x+0, TL2
-04E2 85CD31     228            mov x+1, TH2
-04E5 853D32     229            mov x+2, T2ov+0
-04E8 853E33     230            mov x+3, T2ov+1
-04EB 75342D     231            mov y+0, #low (45 % 0x10000) 
-04EE 753500     231            mov y+1, #high(45 % 0x10000) 
-04F1 753600     231            mov y+2, #low (45 / 0x10000) 
-04F4 753700     231            mov y+3, #high(45 / 0x10000)  ; One clock pulse is 1/22.1184MHz=45.21123ns
-04F7 1201A8     232            lcall mul32
-04FA 753464     233            mov y+0, #low (100 % 0x10000) 
-04FD 753500     233            mov y+1, #high(100 % 0x10000) 
-0500 753600     233            mov y+2, #low (100 / 0x10000) 
-0503 753700     233            mov y+3, #high(100 / 0x10000)  ;mult by 1.44 by mult 144/100
-0506 120235     234            lcall div32
-0509 753490     235            mov y+0, #low (144 % 0x10000) 
-050C 753500     235            mov y+1, #high(144 % 0x10000) 
-050F 753600     235            mov y+2, #low (144 / 0x10000) 
-0512 753700     235            mov y+3, #high(144 / 0x10000)   
-0515 1201A8     236            lcall mul32
-0518 7534B0     237            mov y+0, #low (1200 % 0x10000) 
-051B 753504     237            mov y+1, #high(1200 % 0x10000) 
-051E 753600     237            mov y+2, #low (1200 / 0x10000) 
-0521 753700     237            mov y+3, #high(1200 / 0x10000)  ;since i used 2 1k resistors
-0524 120235     238            lcall div32
-0527            239            
-0527            240            ;b holds the capacitance
-0527 8530F0     241            mov b, x
-052A 85F049     242            mov capacitance, b
-052D            243   
-052D            244            ;comparing capacitance with 200 nF
-052D            245            ;Set_Cursor(2, 1)
-052D            246            ;lcall hex2bcd
-052D            247            ;lcall Display_10_digit_BCD
-052D 120778     248            lcall One_Cycle
-0530            249            
-0530            250            
-0530 02045C     251       ljmp forever ; Repeat! 
-0533            252       
-0533            253   Inc_Score:
-0533 753049     254            mov x+0, #low (capacitance % 0x10000) 
-0536 753100     254            mov x+1, #high(capacitance % 0x10000) 
-0539 753200     254            mov x+2, #low (capacitance / 0x10000) 
-053C 753300     254            mov x+3, #high(capacitance / 0x10000) 
-053F 7534C8     255            mov y+0, #low (200 % 0x10000) 
-0542 753500     255            mov y+1, #high(200 % 0x10000) 
-0545 753600     255            mov y+2, #low (200 / 0x10000) 
-0548 753700     255            mov y+3, #high(200 / 0x10000) 
-054B 120152     256            lcall x_gt_y
-054E            257            ;if the capacitance is greater than 200, mf will be set to 1
-054E            258            
-054E 200001     259            jb mf, Add_Score
-0551 22         260            ret
-0552            261            
-0552            262   Add_Score:
-0552 0543       263            inc p1Score
-0554 753043     264            mov x+0, #low (p1Score % 0x10000) 
-0557 753100     264            mov x+1, #high(p1Score % 0x10000) 
-055A 753200     264            mov x+2, #low (p1Score / 0x10000) 
-055D 753300     264            mov x+3, #high(p1Score / 0x10000) 
-0560 C0E0       265            push acc
-0562 7401       265            mov a, #1
-0564 14         265            dec a
-0565 120353     265            lcall ?Set_Cursor_2 ; Select column and row
-0568 D0E0       265            pop acc
-056A 12002E     266            lcall hex2bcd
-056D C000       267            push ar0
-056F A843       267            mov r0, p1Score
-0571 12035A     267            lcall ?Display_BCD
-0574 D000       267            pop ar0
-0576            268            
-0576 02045C     269            ljmp forever            
-0579            270   
-0579            271   Bridge_Forever:
-0579 02045C     272            ljmp forever
-057C            273            
-057C            274   ; pseudocode:
-057C            275   ;        if P1 capacitance > 50 (Can replace this number), increment P1
-057C            276   ;   if P2 capacitance > 50 , increment P2
-057C            277   ;        lcall compareScores
-057C            278   ;        ret
-057C            279   
-057C            280   Dec_Score:
-057C 753049     281            mov x+0, #low (capacitance % 0x10000) 
-057F 753100     281            mov x+1, #high(capacitance % 0x10000) 
-0582 753200     281            mov x+2, #low (capacitance / 0x10000) 
-0585 753300     281            mov x+3, #high(capacitance / 0x10000) 
-0588 7534C8     282            mov y+0, #low (200 % 0x10000) 
-058B 753500     282            mov y+1, #high(200 % 0x10000) 
-058E 753600     282            mov y+2, #low (200 / 0x10000) 
-0591 753700     282            mov y+3, #high(200 / 0x10000) 
-0594 120152     283            lcall x_gt_y
-0597            284            ;if the capacitance is greater than 200, mf will be set to 1
-0597            285            
-0597 200001     286            jb mf, Sub_Score
-059A 22         287            ret
-059B            288            
-059B            289   Sub_Score:
-059B 1543       290            dec p1Score
-059D 753043     291            mov x+0, #low (p1Score % 0x10000) 
-05A0 753100     291            mov x+1, #high(p1Score % 0x10000) 
-05A3 753200     291            mov x+2, #low (p1Score / 0x10000) 
-05A6 753300     291            mov x+3, #high(p1Score / 0x10000) 
-05A9            292            
-05A9 C0E0       293            push acc
-05AB 7401       293            mov a, #1
-05AD 14         293            dec a
-05AE 120353     293            lcall ?Set_Cursor_2 ; Select column and row
-05B1 D0E0       293            pop acc
-05B3 12002E     294            lcall hex2bcd
-05B6 C000       295            push ar0
-05B8 A843       295            mov r0, p1Score
-05BA 12035A     295            lcall ?Display_BCD
-05BD D000       295            pop ar0
-05BF            296            
-05BF 02045C     297            ljmp forever
-05C2            298   ; pseudocode:
-05C2            299   ;        if P1 capacitance > 50 (Can replace this number), decrement P1
-05C2            300   ;   if P2 capacitance > 50 , decrement P2
-05C2            301   ;        ret    
-05C2            302   
-05C2            303   Random: 
-05C2            304            ; Dont worry about this, it is just some math that is good enough to randomize numbers enough for our purposes
-05C2 853F30     305       mov x+0, Seed+0
-05C5 854031     306       mov x+1, Seed+1
-05C8 854132     307       mov x+2, Seed+2
-05CB 854233     308       mov x+3, Seed+3
-05CE 7534FD     309            mov y+0, #low (214013 % 0x10000) 
-05D1 753543     309            mov y+1, #high(214013 % 0x10000) 
-05D4 753603     309            mov y+2, #low (214013 / 0x10000) 
-05D7 753700     309            mov y+3, #high(214013 / 0x10000) 
-05DA 1201A8     310       lcall mul32
-05DD 7534C3     311            mov y+0, #low (2531011 % 0x10000) 
-05E0 75359E     311            mov y+1, #high(2531011 % 0x10000) 
-05E3 753626     311            mov y+2, #low (2531011 / 0x10000) 
-05E6 753700     311            mov y+3, #high(2531011 / 0x10000) 
-05E9 1200F3     312       lcall add32
-05EC 85303F     313       mov Seed+0, x+0
-05EF 853140     314       mov Seed+1, x+1
-05F2 853241     315       mov Seed+2, x+2
-05F5 853342     316       mov Seed+3, x+3
-05F8 22         317       ret
-05F9            318       
-05F9            319   Wait_Random_Time:
-05F9 C002       320            push AR2
-05FB AA3F       320            mov R2, Seed+0
-05FD 1202CF     320            lcall ?Wait_Milli_Seconds
-0600 D002       320            pop AR2
-0602 12057C     321            lcall Dec_Score
-0605 C002       322            push AR2
-0607 AA40       322            mov R2, Seed+1
-0609 1202CF     322            lcall ?Wait_Milli_Seconds
-060C D002       322            pop AR2
-060E            323       ;Inc_Score ... so on in between each random wait time
-060E 12057C     324       lcall Dec_Score
-0611 C002       325            push AR2
-0613 AA41       325            mov R2, Seed+2
-0615 1202CF     325            lcall ?Wait_Milli_Seconds
-0618 D002       325            pop AR2
-061A 12057C     326       lcall Dec_Score
-061D C002       327            push AR2
-061F AA42       327            mov R2, Seed+3
-0621 1202CF     327            lcall ?Wait_Milli_Seconds
-0624 D002       327            pop AR2
-0626 12057C     328       lcall Dec_Score
-0629 C002       329            push AR2
-062B AA3F       329            mov R2, Seed+0
-062D 1202CF     329            lcall ?Wait_Milli_Seconds
-0630 D002       329            pop AR2
-0632 12057C     330       lcall Dec_Score
-0635 C002       331            push AR2
-0637 AA40       331            mov R2, Seed+1
-0639 1202CF     331            lcall ?Wait_Milli_Seconds
-063C D002       331            pop AR2
-063E 12057C     332       lcall Dec_Score
-0641 C002       333            push AR2
-0643 AA41       333            mov R2, Seed+2
-0645 1202CF     333            lcall ?Wait_Milli_Seconds
-0648 D002       333            pop AR2
-064A 12057C     334       lcall Dec_Score
-064D C002       335            push AR2
-064F AA42       335            mov R2, Seed+3
-0651 1202CF     335            lcall ?Wait_Milli_Seconds
-0654 D002       335            pop AR2
-0656 12057C     336       lcall Dec_Score
-0659 C002       337            push AR2
-065B AA3F       337            mov R2, Seed+0
-065D 1202CF     337            lcall ?Wait_Milli_Seconds
-0660 D002       337            pop AR2
-0662 12057C     338       lcall Dec_Score
-0665 C002       339            push AR2
-0667 AA40       339            mov R2, Seed+1
-0669 1202CF     339            lcall ?Wait_Milli_Seconds
-066C D002       339            pop AR2
-066E 12057C     340       lcall Dec_Score
-0671 C002       341            push AR2
-0673 AA41       341            mov R2, Seed+2
-0675 1202CF     341            lcall ?Wait_Milli_Seconds
-0678 D002       341            pop AR2
-067A 12057C     342       lcall Dec_Score
-067D C002       343            push AR2
-067F AA42       343            mov R2, Seed+3
-0681 1202CF     343            lcall ?Wait_Milli_Seconds
-0684 D002       343            pop AR2
-0686 12057C     344       lcall Dec_Score
-0689 C002       345            push AR2
-068B AA3F       345            mov R2, Seed+0
-068D 1202CF     345            lcall ?Wait_Milli_Seconds
-0690 D002       345            pop AR2
-0692 12057C     346            lcall Dec_Score
-0695 C002       347            push AR2
-0697 AA40       347            mov R2, Seed+1
-0699 1202CF     347            lcall ?Wait_Milli_Seconds
-069C D002       347            pop AR2
-069E            348       ;Inc_Score ... so on in between each random wait time
-069E 12057C     349       lcall Dec_Score
-06A1 C002       350            push AR2
-06A3 AA41       350            mov R2, Seed+2
-06A5 1202CF     350            lcall ?Wait_Milli_Seconds
-06A8 D002       350            pop AR2
-06AA 12057C     351       lcall Dec_Score
-06AD C002       352            push AR2
-06AF AA42       352            mov R2, Seed+3
-06B1 1202CF     352            lcall ?Wait_Milli_Seconds
-06B4 D002       352            pop AR2
-06B6 12057C     353       lcall Dec_Score
-06B9 C002       354            push AR2
-06BB AA3F       354            mov R2, Seed+0
-06BD 1202CF     354            lcall ?Wait_Milli_Seconds
-06C0 D002       354            pop AR2
-06C2 12057C     355            lcall Dec_Score
-06C5 C002       356            push AR2
-06C7 AA40       356            mov R2, Seed+1
-06C9 1202CF     356            lcall ?Wait_Milli_Seconds
-06CC D002       356            pop AR2
-06CE            357       ;Inc_Score ... so on in between each random wait time
-06CE 12057C     358       lcall Dec_Score
-06D1 C002       359            push AR2
-06D3 AA41       359            mov R2, Seed+2
-06D5 1202CF     359            lcall ?Wait_Milli_Seconds
-06D8 D002       359            pop AR2
-06DA 12057C     360       lcall Dec_Score
-06DD C002       361            push AR2
-06DF AA42       361            mov R2, Seed+3
-06E1 1202CF     361            lcall ?Wait_Milli_Seconds
-06E4 D002       361            pop AR2
-06E6 12057C     362       lcall Dec_Score
-06E9 C002       363            push AR2
-06EB AA3F       363            mov R2, Seed+0
-06ED 1202CF     363            lcall ?Wait_Milli_Seconds
-06F0 D002       363            pop AR2
-06F2 12057C     364            lcall Dec_Score
-06F5 C002       365            push AR2
-06F7 AA40       365            mov R2, Seed+1
-06F9 1202CF     365            lcall ?Wait_Milli_Seconds
-06FC D002       365            pop AR2
-06FE            366       ;Inc_Score ... so on in between each random wait time
-06FE 12057C     367       lcall Dec_Score
-0701 C002       368            push AR2
-0703 AA41       368            mov R2, Seed+2
-0705 1202CF     368            lcall ?Wait_Milli_Seconds
-0708 D002       368            pop AR2
-070A 12057C     369       lcall Dec_Score
-070D C002       370            push AR2
-070F AA42       370            mov R2, Seed+3
-0711 1202CF     370            lcall ?Wait_Milli_Seconds
-0714 D002       370            pop AR2
-0716 12057C     371       lcall Dec_Score
-0719 22         372       ret    
-071A            373       
-071A            374   Wait_Constant_Time:
-071A C002       375            push AR2
-071C 7AFF       375            mov R2, #255
-071E 1202CF     375            lcall ?Wait_Milli_Seconds
-0721 D002       375            pop AR2
-0723 120533     376            lcall Inc_Score
-0726 C002       377            push AR2
-0728 7AFF       377            mov R2, #255
-072A 1202CF     377            lcall ?Wait_Milli_Seconds
-072D D002       377            pop AR2
-072F 120533     378       lcall Inc_Score
-0732 C002       379            push AR2
-0734 7AFF       379            mov R2, #255
-0736 1202CF     379            lcall ?Wait_Milli_Seconds
-0739 D002       379            pop AR2
-073B 120533     380       lcall Inc_Score
-073E C002       381            push AR2
-0740 7AFF       381            mov R2, #255
-0742 1202CF     381            lcall ?Wait_Milli_Seconds
-0745 D002       381            pop AR2
-0747 120533     382       lcall Inc_Score
-074A C002       383            push AR2
-074C 7AFF       383            mov R2, #255
-074E 1202CF     383            lcall ?Wait_Milli_Seconds
-0751 D002       383            pop AR2
-0753 120533     384       lcall Inc_Score
-0756 C002       385            push AR2
-0758 7AFF       385            mov R2, #255
-075A 1202CF     385            lcall ?Wait_Milli_Seconds
-075D D002       385            pop AR2
-075F 120533     386       lcall Inc_Score
-0762 C002       387            push AR2
-0764 7AFF       387            mov R2, #255
-0766 1202CF     387            lcall ?Wait_Milli_Seconds
-0769 D002       387            pop AR2
-076B 120533     388       lcall Inc_Score
-076E C002       389            push AR2
-0770 7AFF       389            mov R2, #255
-0772 1202CF     389            lcall ?Wait_Milli_Seconds
-0775 D002       389            pop AR2
-0777 22         390       ret
-0778            391       
-0778            392   One_Cycle:
-0778 1205F9     393            lcall Wait_Random_Time ; in here, we are continuously checking if someone slaps, if they do, we decrement
-077B 120407     394       lcall Timer0_HIGH_Init
-077E            395       ;Wait for slap, if slapped, increment score
-077E 12071A     396       lcall Wait_Constant_Time ; in here, we are continuously checking if someone slaps, if they do we increment
-0781 1203EE     397       lcall Timer0_Init
-0784            398       ;Wait for slap, if slapped, decrement score
-0784 22         399       ret
-0785            400       
-0785            401   Compare_Scores:
-0785            402   ;   if p1Score == 5 , ljmp P1_Wins
-0785            403            
-0785            404   ;        if p2Score == 5 , ljmp P2_Wins
-0785            405   ;                
-0785            406   
-0785            407   P1_Wins:
-0785            408   ; Display some sort of message
-0785            409   
-0785            410   P2_Wins:
-0785            411   ; display some sort of message
-0785            412   ;
-0785            413   Play_Music:
-0785            414   
-0785            415   
-0785            416   
-0785            417   end
+04DF            227   
+04DF 120730     228            lcall Calculate_Capacitance
+04E2            229            
+04E2            230            
+04E2            231            ;mov b, x
+04E2            232            ;mov capacitance, b
+04E2            233   
+04E2            234            ;comparing capacitance with 200 nF
+04E2            235            ;Set_Cursor(2, 1)
+04E2            236            ;lcall hex2bcd
+04E2            237            ;lcall Display_10_digit_BCD
+04E2 120723     238            lcall One_Cycle
+04E5            239            
+04E5            240            
+04E5 0204D5     241       ljmp skip_this ; Repeat! 
+04E8            242       
+04E8            243   Inc_Score:
+04E8            244            ;load_x(capacitance)
+04E8 120730     245            lcall Calculate_Capacitance
+04EB            246            ;mov x+0, capacitance+0
+04EB            247            ;mov x+1, capacitance+1
+04EB            248            ;mov x+2, capacitance+2
+04EB            249            ;mov x+3, capacitance+3
+04EB 753478     250            mov y+0, #low (120 % 0x10000) 
+04EE 753500     250            mov y+1, #high(120 % 0x10000) 
+04F1 753600     250            mov y+2, #low (120 / 0x10000) 
+04F4 753700     250            mov y+3, #high(120 / 0x10000) 
+04F7 120152     251            lcall x_gt_y
+04FA            252            ;if the capacitance is greater than 200, mf will be set to 1
+04FA            253            
+04FA 200001     254            jb mf, Add_Score
+04FD 22         255            ret
+04FE            256            
+04FE            257   Add_Score:
+04FE C200       258            clr mf
+0500            259            ;inc p1Score
+0500 854330     260            mov x+0, p1Score+0
+0503 753100     261            mov x+1, #0
+0506 753200     262            mov x+2, #0
+0509 753300     263            mov x+3, #0
+050C C0E0       264            push acc
+050E 7401       264            mov a, #1
+0510 14         264            dec a
+0511 120353     264            lcall ?Set_Cursor_2 ; Select column and row
+0514 D0E0       264            pop acc
+0516 E543       265            mov a, p1Score
+0518 2401       266            add a, #0x01
+051A D4         267            da a
+051B F543       268            mov p1Score, a
+051D            269            ;da x
+051D C000       270            push ar0
+051F A843       270            mov r0, p1Score
+0521 12035A     270            lcall ?Display_BCD
+0524 D000       270            pop ar0
+0526            271            
+0526 0204D5     272            ljmp skip_this          
+0529            273   
+0529            274   Bridge_Forever:
+0529 02045C     275            ljmp forever
+052C            276            
+052C            277   ; pseudocode:
+052C            278   ;        if P1 capacitance > 50 (Can replace this number), increment P1
+052C            279   ;   if P2 capacitance > 50 , increment P2
+052C            280   ;        lcall compareScores
+052C            281   ;        ret
+052C            282   
+052C            283   Dec_Score:
+052C 120730     284            lcall Calculate_Capacitance
+052F            285            ;mov x+0, capacitance+0
+052F            286            ;mov x+1, capacitance+1
+052F            287            ;mov x+2, capacitance+2
+052F            288            ;mov x+3, capacitance+3
+052F 753478     289            mov y+0, #low (120 % 0x10000) 
+0532 753500     289            mov y+1, #high(120 % 0x10000) 
+0535 753600     289            mov y+2, #low (120 / 0x10000) 
+0538 753700     289            mov y+3, #high(120 / 0x10000) 
+053B 120152     290            lcall x_gt_y
+053E            291            ;if the capacitance is greater than 200, mf will be set to 1
+053E            292            
+053E            293            
+053E            294            
+053E 200001     295            jb mf, Sub_Score
+0541 22         296            ret
+0542            297            
+0542            298   Sub_Score:
+0542 C200       299            clr mf
+0544            300            ;dec p1Score
+0544            301            
+0544 854330     302            mov x+0, p1Score+0
+0547 753100     303            mov x+1, #0
+054A 753200     304            mov x+2, #0
+054D 753300     305            mov x+3, #0
+0550            306            ;load_x(p1Score)
+0550 E543       307            mov a, p1Score
+0552 2499       308            add a, #0x99
+0554 D4         309            da a
+0555 F543       310            mov p1Score, a
+0557            311            
+0557            312            
+0557 C0E0       313            push acc
+0559 7401       313            mov a, #1
+055B 14         313            dec a
+055C 120353     313            lcall ?Set_Cursor_2 ; Select column and row
+055F D0E0       313            pop acc
+0561            314            ;lcall hex2bcd
+0561 C000       315            push ar0
+0563 A843       315            mov r0, p1Score
+0565 12035A     315            lcall ?Display_BCD
+0568 D000       315            pop ar0
+056A            316            
+056A 0204D5     317            ljmp skip_this
+056D            318   ; pseudocode:
+056D            319   ;        if P1 capacitance > 50 (Can replace this number), decrement P1
+056D            320   ;   if P2 capacitance > 50 , decrement P2
+056D            321   ;        ret    
+056D            322   
+056D            323   Random: 
+056D            324            ; Dont worry about this, it is just some math that is good enough to randomize numbers enough for our purposes
+056D 853F30     325       mov x+0, Seed+0
+0570 854031     326       mov x+1, Seed+1
+0573 854132     327       mov x+2, Seed+2
+0576 854233     328       mov x+3, Seed+3
+0579 7534FD     329            mov y+0, #low (214013 % 0x10000) 
+057C 753543     329            mov y+1, #high(214013 % 0x10000) 
+057F 753603     329            mov y+2, #low (214013 / 0x10000) 
+0582 753700     329            mov y+3, #high(214013 / 0x10000) 
+0585 1201A8     330       lcall mul32
+0588 7534C3     331            mov y+0, #low (2531011 % 0x10000) 
+058B 75359E     331            mov y+1, #high(2531011 % 0x10000) 
+058E 753626     331            mov y+2, #low (2531011 / 0x10000) 
+0591 753700     331            mov y+3, #high(2531011 / 0x10000) 
+0594 1200F3     332       lcall add32
+0597 85303F     333       mov Seed+0, x+0
+059A 853140     334       mov Seed+1, x+1
+059D 853241     335       mov Seed+2, x+2
+05A0 853342     336       mov Seed+3, x+3
+05A3 22         337       ret
+05A4            338       
+05A4            339   Wait_Random_Time:
+05A4 C002       340            push AR2
+05A6 AA3F       340            mov R2, Seed+0
+05A8 1202CF     340            lcall ?Wait_Milli_Seconds
+05AB D002       340            pop AR2
+05AD 12052C     341            lcall Dec_Score
+05B0 C002       342            push AR2
+05B2 AA40       342            mov R2, Seed+1
+05B4 1202CF     342            lcall ?Wait_Milli_Seconds
+05B7 D002       342            pop AR2
+05B9            343       ;Inc_Score ... so on in between each random wait time
+05B9 12052C     344       lcall Dec_Score
+05BC C002       345            push AR2
+05BE AA41       345            mov R2, Seed+2
+05C0 1202CF     345            lcall ?Wait_Milli_Seconds
+05C3 D002       345            pop AR2
+05C5 12052C     346       lcall Dec_Score
+05C8 C002       347            push AR2
+05CA AA42       347            mov R2, Seed+3
+05CC 1202CF     347            lcall ?Wait_Milli_Seconds
+05CF D002       347            pop AR2
+05D1 12052C     348       lcall Dec_Score
+05D4 C002       349            push AR2
+05D6 AA3F       349            mov R2, Seed+0
+05D8 1202CF     349            lcall ?Wait_Milli_Seconds
+05DB D002       349            pop AR2
+05DD 12052C     350       lcall Dec_Score
+05E0 C002       351            push AR2
+05E2 AA40       351            mov R2, Seed+1
+05E4 1202CF     351            lcall ?Wait_Milli_Seconds
+05E7 D002       351            pop AR2
+05E9 12052C     352       lcall Dec_Score
+05EC C002       353            push AR2
+05EE AA41       353            mov R2, Seed+2
+05F0 1202CF     353            lcall ?Wait_Milli_Seconds
+05F3 D002       353            pop AR2
+05F5 12052C     354       lcall Dec_Score
+05F8 C002       355            push AR2
+05FA AA42       355            mov R2, Seed+3
+05FC 1202CF     355            lcall ?Wait_Milli_Seconds
+05FF D002       355            pop AR2
+0601 12052C     356       lcall Dec_Score
+0604 C002       357            push AR2
+0606 AA3F       357            mov R2, Seed+0
+0608 1202CF     357            lcall ?Wait_Milli_Seconds
+060B D002       357            pop AR2
+060D 12052C     358       lcall Dec_Score
+0610 C002       359            push AR2
+0612 AA40       359            mov R2, Seed+1
+0614 1202CF     359            lcall ?Wait_Milli_Seconds
+0617 D002       359            pop AR2
+0619 12052C     360       lcall Dec_Score
+061C C002       361            push AR2
+061E AA41       361            mov R2, Seed+2
+0620 1202CF     361            lcall ?Wait_Milli_Seconds
+0623 D002       361            pop AR2
+0625 12052C     362       lcall Dec_Score
+0628 C002       363            push AR2
+062A AA42       363            mov R2, Seed+3
+062C 1202CF     363            lcall ?Wait_Milli_Seconds
+062F D002       363            pop AR2
+0631 12052C     364       lcall Dec_Score
+0634 C002       365            push AR2
+0636 AA3F       365            mov R2, Seed+0
+0638 1202CF     365            lcall ?Wait_Milli_Seconds
+063B D002       365            pop AR2
+063D 12052C     366            lcall Dec_Score
+0640 C002       367            push AR2
+0642 AA40       367            mov R2, Seed+1
+0644 1202CF     367            lcall ?Wait_Milli_Seconds
+0647 D002       367            pop AR2
+0649            368       ;Inc_Score ... so on in between each random wait time
+0649 12052C     369       lcall Dec_Score
+064C C002       370            push AR2
+064E AA41       370            mov R2, Seed+2
+0650 1202CF     370            lcall ?Wait_Milli_Seconds
+0653 D002       370            pop AR2
+0655 12052C     371       lcall Dec_Score
+0658 C002       372            push AR2
+065A AA42       372            mov R2, Seed+3
+065C 1202CF     372            lcall ?Wait_Milli_Seconds
+065F D002       372            pop AR2
+0661 12052C     373       lcall Dec_Score
+0664 C002       374            push AR2
+0666 AA3F       374            mov R2, Seed+0
+0668 1202CF     374            lcall ?Wait_Milli_Seconds
+066B D002       374            pop AR2
+066D 12052C     375            lcall Dec_Score
+0670 C002       376            push AR2
+0672 AA40       376            mov R2, Seed+1
+0674 1202CF     376            lcall ?Wait_Milli_Seconds
+0677 D002       376            pop AR2
+0679            377       ;Inc_Score ... so on in between each random wait time
+0679 12052C     378       lcall Dec_Score
+067C C002       379            push AR2
+067E AA41       379            mov R2, Seed+2
+0680 1202CF     379            lcall ?Wait_Milli_Seconds
+0683 D002       379            pop AR2
+0685 12052C     380       lcall Dec_Score
+0688 C002       381            push AR2
+068A AA42       381            mov R2, Seed+3
+068C 1202CF     381            lcall ?Wait_Milli_Seconds
+068F D002       381            pop AR2
+0691 12052C     382       lcall Dec_Score
+0694 C002       383            push AR2
+0696 AA3F       383            mov R2, Seed+0
+0698 1202CF     383            lcall ?Wait_Milli_Seconds
+069B D002       383            pop AR2
+069D 12052C     384            lcall Dec_Score
+06A0 C002       385            push AR2
+06A2 AA40       385            mov R2, Seed+1
+06A4 1202CF     385            lcall ?Wait_Milli_Seconds
+06A7 D002       385            pop AR2
+06A9            386       ;Inc_Score ... so on in between each random wait time
+06A9 12052C     387       lcall Dec_Score
+06AC C002       388            push AR2
+06AE AA41       388            mov R2, Seed+2
+06B0 1202CF     388            lcall ?Wait_Milli_Seconds
+06B3 D002       388            pop AR2
+06B5 12052C     389       lcall Dec_Score
+06B8 C002       390            push AR2
+06BA AA42       390            mov R2, Seed+3
+06BC 1202CF     390            lcall ?Wait_Milli_Seconds
+06BF D002       390            pop AR2
+06C1 12052C     391       lcall Dec_Score
+06C4 22         392       ret    
+06C5            393       
+06C5            394   Wait_Constant_Time:
+06C5 C002       395            push AR2
+06C7 7AFF       395            mov R2, #255
+06C9 1202CF     395            lcall ?Wait_Milli_Seconds
+06CC D002       395            pop AR2
+06CE 1204E8     396            lcall Inc_Score
+06D1 C002       397            push AR2
+06D3 7AFF       397            mov R2, #255
+06D5 1202CF     397            lcall ?Wait_Milli_Seconds
+06D8 D002       397            pop AR2
+06DA 1204E8     398       lcall Inc_Score
+06DD C002       399            push AR2
+06DF 7AFF       399            mov R2, #255
+06E1 1202CF     399            lcall ?Wait_Milli_Seconds
+06E4 D002       399            pop AR2
+06E6 1204E8     400       lcall Inc_Score
+06E9 C002       401            push AR2
+06EB 7AFF       401            mov R2, #255
+06ED 1202CF     401            lcall ?Wait_Milli_Seconds
+06F0 D002       401            pop AR2
+06F2 1204E8     402       lcall Inc_Score
+06F5 C002       403            push AR2
+06F7 7AFF       403            mov R2, #255
+06F9 1202CF     403            lcall ?Wait_Milli_Seconds
+06FC D002       403            pop AR2
+06FE 1204E8     404       lcall Inc_Score
+0701 C002       405            push AR2
+0703 7AFF       405            mov R2, #255
+0705 1202CF     405            lcall ?Wait_Milli_Seconds
+0708 D002       405            pop AR2
+070A 1204E8     406       lcall Inc_Score
+070D C002       407            push AR2
+070F 7AFF       407            mov R2, #255
+0711 1202CF     407            lcall ?Wait_Milli_Seconds
+0714 D002       407            pop AR2
+0716 1204E8     408       lcall Inc_Score
+0719 C002       409            push AR2
+071B 7AFF       409            mov R2, #255
+071D 1202CF     409            lcall ?Wait_Milli_Seconds
+0720 D002       409            pop AR2
+0722 22         410       ret
+0723            411       
+0723            412   One_Cycle:
+0723 1205A4     413            lcall Wait_Random_Time ; in here, we are continuously checking if someone slaps, if they do, we decrement
+0726 120407     414       lcall Timer0_HIGH_Init
+0729            415       ;Wait for slap, if slapped, increment score
+0729 1206C5     416       lcall Wait_Constant_Time ; in here, we are continuously checking if someone slaps, if they do we increment
+072C 1203EE     417       lcall Timer0_Init
+072F            418       ;Wait for slap, if slapped, decrement score
+072F 22         419       ret
+0730            420       
+0730            421   Compare_Scores:
+0730            422   ;   if p1Score == 5 , ljmp P1_Wins
+0730            423            
+0730            424   ;        if p2Score == 5 , ljmp P2_Wins
+0730            425   ;                
+0730            426   
+0730            427   P1_Wins:
+0730            428   ; Display some sort of message
+0730            429   
+0730            430   P2_Wins:
+0730            431   ; display some sort of message
+0730            432   ;
+0730            433   Start_Screen:
+0730            434   
+0730            435   Calculate_Capacitance:
+0730 85CC30     436            mov x+0, TL2
+0733 85CD31     437            mov x+1, TH2
+0736 853D32     438            mov x+2, T2ov+0
+0739 853E33     439            mov x+3, T2ov+1
+073C            440            
+073C 75342D     441            mov y+0, #low (45 % 0x10000) 
+073F 753500     441            mov y+1, #high(45 % 0x10000) 
+0742 753600     441            mov y+2, #low (45 / 0x10000) 
+0745 753700     441            mov y+3, #high(45 / 0x10000)  ; One clock pulse is 1/22.1184MHz=45.21123ns
+0748 1201A8     442            lcall mul32
+074B 753464     443            mov y+0, #low (100 % 0x10000) 
+074E 753500     443            mov y+1, #high(100 % 0x10000) 
+0751 753600     443            mov y+2, #low (100 / 0x10000) 
+0754 753700     443            mov y+3, #high(100 / 0x10000)  ;mult by 1.44 by mult 144/100
+0757 120235     444            lcall div32
+075A 753490     445            mov y+0, #low (144 % 0x10000) 
+075D 753500     445            mov y+1, #high(144 % 0x10000) 
+0760 753600     445            mov y+2, #low (144 / 0x10000) 
+0763 753700     445            mov y+3, #high(144 / 0x10000)   
+0766 1201A8     446            lcall mul32
+0769 7534B0     447            mov y+0, #low (1200 % 0x10000) 
+076C 753504     447            mov y+1, #high(1200 % 0x10000) 
+076F 753600     447            mov y+2, #low (1200 / 0x10000) 
+0772 753700     447            mov y+3, #high(1200 / 0x10000)  ;since i used 2 1k resistors
+0775 120235     448            lcall div32
+0778            449            
+0778            450            
+0778 853045     451            mov capacitance+0, x+0
+077B 853146     452            mov capacitance+1, x+1
+077E 853247     453            mov capacitance+2, x+2
+0781 853348     454            mov capacitance+3, x+3
+0784 22         455            ret
+0785            456            
+0785            457   
+0785            458   
+0785            459   
+0785            460   end
