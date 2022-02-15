@@ -69,7 +69,7 @@ Player_Two equ P0.0
 
 
 ;                     1234567890123456    <- This helps determine the location of the counter
-Initial_Message:  db 'P1          P2', 0
+Initial_Message:  db 'P1            P2', 0
 Overflow_Str:    db '00           00', 0
 Player_One_Text: db 'Player 1: ', 0
 Player_Two_Text: db 'Player 2: ',0
@@ -333,7 +333,7 @@ Inc_Score:
 	;mov x+1, capacitance+1
 	;mov x+2, capacitance+2
 	;mov x+3, capacitance+3
-	load_y(9000000)
+	load_y(950000)
 	lcall x_gt_y
 	;if the capacitance is greater than 200, mf will be set to 1
 	
@@ -357,7 +357,7 @@ Add_Score:
 Inc_Score_p2:
 	clr mf
 	lcall forever2
-	load_y(7000000)
+	load_y(950000)
 	lcall x_gt_y
 	jb mf, Add_Score_p2
 	ret
@@ -392,7 +392,7 @@ Dec_Score:
 	;mov x+3, capacitance+3
 	Set_Cursor(2, 1)
 	Display_BCD(p1Score)
-	load_y(9000000)
+	load_y(950000)
 	lcall x_gt_y
 	;if the capacitance is greater than 200, mf will be set to 1
 	
@@ -421,7 +421,7 @@ Dec_Score_p2:
 	lcall forever2
 	Set_Cursor(2, 15)
 	Display_BCD(p2Score)
-	load_y(7000000)
+	load_y(950000)
 	lcall x_gt_y
 	;if the capacitance is greater than 200, mf will be set to 1
 	
