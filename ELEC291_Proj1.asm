@@ -15,6 +15,7 @@ org 0x002B
 DSEG at 30H
 x:   ds 4
 y:   ds 4
+z:   ds 4
 bcd: ds 5
 T2ov: ds 2 ; 16-bit timer 2 overflow (to measure the period of very slow signals)
 Seed: ds 4
@@ -45,6 +46,8 @@ $include(LCD_4bit.inc) ; A library of LCD related functions and utility macros
 $LIST
 
 CLK           EQU 22118400 ; Microcontroller system crystal frequency in Hz
+TIMER0_OFF_RATE    EQU 65536
+TIMER0_OFF_RELOAD EQU ((65536-(CLK/TIMER0_OFF_RATE)))
 TIMER0_RATE   EQU 1000     ; 2048Hz squarewave (peak amplitude of CEM-1203 speaker)
 TIMER0_RATE_HIGH EQU 4096
 TIMER0_RATE_LOW EQU 1000
@@ -130,6 +133,21 @@ Timer0_HIGH_Init:
     setb ET0  ; Enable timer 0 interrupt
     setb TR0  ; Start timer 0
 	ret
+
+Timer0_OFF_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_OFF_RELOAD)
+	mov TL0, #low(TIMER0_OFF_RELOAD)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_OFF_RELOAD)
+	mov RL0, #low(TIMER0_OFF_RELOAD)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
 Timer0_ISR:
 	;clr TF0  ; According to the data sheet this is done for us already.
 	cpl SOUND_OUT ; Connect speaker to P1.1!
@@ -162,6 +180,12 @@ MyProgram:
     lcall Timer0_Init
     lcall InitTimer2
     
+    mov Seed+0, TH2
+    mov Seed+1, #0x01
+    mov Seed+2, #0x87
+    mov Seed+3, TL2
+    
+    lcall One_Cycle
 forever:
     ; synchronize with rising edge of the signal applied to pin P0.0
     clr TR2 ; Stop timer 2
@@ -172,19 +196,18 @@ forever:
     clr TF2
     setb TR2
     
-    ;lcall One_Cycle
-    
-    mov Seed+0, TH2
-    mov Seed+1, #0x01
-    mov Seed+2, #0x87
-    mov Seed+3, TL2
-    clr TR2
-     
+    lcall synch1
+    lcall synch2
+    lcall measure1
+    lcall measure2
+    lcall skip_this
+    ret
 synch1:
 	mov a, T2ov+1
 	anl a, #0xfe
 	jnz no_signal ; If the count is larger than 0x01ffffffff*45ns=1.16s, we assume there is no signal
     jb P0.0, synch1
+    ret
 synch2:    
 	mov a, T2ov+1
 	anl a, #0xfe
@@ -198,6 +221,7 @@ synch2:
     mov T2ov+1, #0
     clr TF2
     setb TR2 ; Start timer 2
+    ret
 measure1:
 	mov a, T2ov+1
 	anl a, #0xfe
@@ -215,19 +239,21 @@ no_signal:
 	Set_Cursor(2, 1)
     Send_Constant_String(#Overflow_Str)
     ljmp forever ; Repeat! 
+    
 skip_this:
-
 	; Make sure [T2ov+1, T2ov+2, TH2, TL2]!=0
 	mov a, TL2
 	orl a, TH2
 	orl a, T2ov+0
 	orl a, T2ov+1
 	jz no_signal
+	
+	lcall Calculate_Period
 	; Using integer math, convert the period to frequency:
 
-	lcall Calculate_Capacitance
+	;lcall Calculate_Capacitance
 	
-	
+	;ljmp Calculate_Period
 	;mov b, x
 	;mov capacitance, b
 
@@ -235,19 +261,18 @@ skip_this:
 	;Set_Cursor(2, 1)
 	;lcall hex2bcd
 	;lcall Display_10_digit_BCD
-	lcall One_Cycle
-	
-	
-    ljmp skip_this ; Repeat! 
+	 ; Repeat! 
+    ret
     
 Inc_Score:
+	lcall forever
 	;load_x(capacitance)
-	lcall Calculate_Capacitance
+	;lcall Calculate_Capacitance
 	;mov x+0, capacitance+0
 	;mov x+1, capacitance+1
 	;mov x+2, capacitance+2
 	;mov x+3, capacitance+3
-	load_y(120)
+	load_y(9000000)
 	lcall x_gt_y
 	;if the capacitance is greater than 200, mf will be set to 1
 	
@@ -257,19 +282,17 @@ Inc_Score:
 Add_Score:
 	clr mf
 	;inc p1Score
-	mov x+0, p1Score+0
-	mov x+1, #0
-	mov x+2, #0
-	mov x+3, #0
+	clr a
 	Set_Cursor(2, 1)
+	
 	mov a, p1Score
 	add a, #0x01
 	da a
 	mov p1Score, a
-	;da x
 	Display_BCD(p1Score)
 	
-	ljmp skip_this		
+	ljmp End_Round
+	;ret		
 
 Bridge_Forever:
 	ljmp forever
@@ -281,16 +304,17 @@ Bridge_Forever:
 ;	ret
 
 Dec_Score:
-	lcall Calculate_Capacitance
+	lcall forever
+	;lcall Calculate_Capacitance
 	;mov x+0, capacitance+0
 	;mov x+1, capacitance+1
 	;mov x+2, capacitance+2
 	;mov x+3, capacitance+3
-	load_y(120)
+	Set_Cursor(2, 1)
+	Display_BCD(p1Score)
+	load_y(9000000)
 	lcall x_gt_y
 	;if the capacitance is greater than 200, mf will be set to 1
-	
-	
 	
 	jb mf, Sub_Score
 	ret
@@ -298,23 +322,19 @@ Dec_Score:
 Sub_Score:
 	clr mf
 	;dec p1Score
-	
-	mov x+0, p1Score+0
-	mov x+1, #0
-	mov x+2, #0
-	mov x+3, #0
+
 	;load_x(p1Score)
 	mov a, p1Score
 	add a, #0x99
 	da a
 	mov p1Score, a
-	
-	
+		
 	Set_Cursor(2, 1)
 	;lcall hex2bcd
 	Display_BCD(p1Score)
 	
-	ljmp skip_this
+	;ret
+	ljmp End_Round
 ; pseudocode:
 ; 	if P1 capacitance > 50 (Can replace this number), decrement P1
 ;   if P2 capacitance > 50 , decrement P2
@@ -330,6 +350,7 @@ Random:
     lcall mul32
     Load_y(2531011)
     lcall add32
+    
     mov Seed+0, x+0
     mov Seed+1, x+1
     mov Seed+2, x+2
@@ -337,6 +358,7 @@ Random:
     ret
     
 Wait_Random_Time:
+    lcall Random
 	Wait_Milli_Seconds(Seed+0)
 	lcall Dec_Score
     Wait_Milli_Seconds(Seed+1)
@@ -346,49 +368,7 @@ Wait_Random_Time:
     lcall Dec_Score
     Wait_Milli_Seconds(Seed+3)
     lcall Dec_Score
-    Wait_Milli_Seconds(Seed+0)
-    lcall Dec_Score
-    Wait_Milli_Seconds(Seed+1)
-    lcall Dec_Score
-    Wait_Milli_Seconds(Seed+2)
-    lcall Dec_Score
-    Wait_Milli_Seconds(Seed+3)
-    lcall Dec_Score
-    Wait_Milli_Seconds(Seed+0)
-    lcall Dec_Score
-    Wait_Milli_Seconds(Seed+1)
-    lcall Dec_Score
-    Wait_Milli_Seconds(Seed+2)
-    lcall Dec_Score
-    Wait_Milli_Seconds(Seed+3)
-    lcall Dec_Score
-    Wait_Milli_Seconds(Seed+0)
-	lcall Dec_Score
-    Wait_Milli_Seconds(Seed+1)
-    ;Inc_Score ... so on in between each random wait time
-    lcall Dec_Score
-    Wait_Milli_Seconds(Seed+2)
-    lcall Dec_Score
-    Wait_Milli_Seconds(Seed+3)
-    lcall Dec_Score
-    Wait_Milli_Seconds(Seed+0)
-	lcall Dec_Score
-    Wait_Milli_Seconds(Seed+1)
-    ;Inc_Score ... so on in between each random wait time
-    lcall Dec_Score
-    Wait_Milli_Seconds(Seed+2)
-    lcall Dec_Score
-    Wait_Milli_Seconds(Seed+3)
-    lcall Dec_Score
-    Wait_Milli_Seconds(Seed+0)
-	lcall Dec_Score
-    Wait_Milli_Seconds(Seed+1)
-    ;Inc_Score ... so on in between each random wait time
-    lcall Dec_Score
-    Wait_Milli_Seconds(Seed+2)
-    lcall Dec_Score
-    Wait_Milli_Seconds(Seed+3)
-    lcall Dec_Score
+    
     ret    
     
 Wait_Constant_Time:
@@ -410,13 +390,18 @@ Wait_Constant_Time:
     ret
     
 One_Cycle:
+	lcall forever
+	lcall Timer0_Init
 	lcall Wait_Random_Time ; in here, we are continuously checking if someone slaps, if they do, we decrement
+	lcall forever
     lcall Timer0_HIGH_Init
+    lcall forever
     ;Wait for slap, if slapped, increment score
     lcall Wait_Constant_Time ; in here, we are continuously checking if someone slaps, if they do we increment
+    lcall forever
     lcall Timer0_Init
     ;Wait for slap, if slapped, decrement score
-    ret
+    ljmp One_Cycle
     
 Compare_Scores:
 ;   if p1Score == 5 , ljmp P1_Wins
@@ -432,7 +417,7 @@ P2_Wins:
 ;
 Start_Screen:
 
-Calculate_Capacitance:
+Calculate_Period:
 	mov x+0, TL2
 	mov x+1, TH2
 	mov x+2, T2ov+0
@@ -440,21 +425,24 @@ Calculate_Capacitance:
 	
 	load_y(45) ; One clock pulse is 1/22.1184MHz=45.21123ns
 	lcall mul32
-	load_y(100) ;mult by 1.44 by mult 144/100
-	lcall div32
-	load_y(144)	
+	load_y(10) ;mult by 1.44 by mult 144/100
 	lcall mul32
-	load_y(1200) ;since i used 2 1k resistors
-	lcall div32
-	
-	
-	mov capacitance+0, x+0
-	mov capacitance+1, x+1
-	mov capacitance+2, x+2
-	mov capacitance+3, x+3
 	ret
 	
+End_Round:
+	lcall Timer0_OFF_Init
+	Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
 
+    Wait_Milli_Seconds(#255)
+    
+    Wait_Milli_Seconds(#255)
+    ljmp One_Cycle
 
 
 end
+
