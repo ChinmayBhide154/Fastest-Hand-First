@@ -64,7 +64,7 @@ TIMER0_RATE_A   EQU 440
 cseg
 
 SOUND_OUT equ P1.1
-SOUND_OUT1 equ P1.0
+SOUND_OUT1 equ P2.3
 Player_One equ P2.1
 Player_Two equ P0.0
 
@@ -162,6 +162,7 @@ Timer0_OFF_Init:
 Timer0_ISR:
 	;clr TF0  ; According to the data sheet this is done for us already.
 	cpl SOUND_OUT ; Connect speaker to P1.1!
+	cpl SOUND_OUT1
 	reti
 
 ;---------------------------------;
@@ -365,6 +366,12 @@ Add_Score_p2:
 	da a
 	mov p2Score, a
 	Display_BCD(p2Score)
+	cpl P0.1
+	Wait_Milli_Seconds(#255)
+	Wait_Milli_Seconds(#255)
+	Wait_Milli_Seconds(#255)
+	Wait_Milli_Seconds(#255)
+	cpl P0.1
 	lcall Compare_Score_p2
 	ljmp End_Round
 
@@ -407,6 +414,12 @@ Sub_Score:
 	Set_Cursor(2, 1)
 	;lcall hex2bcd
 	Display_BCD(p1Score)
+	cpl P0.1
+	Wait_Milli_Seconds(#255)
+	Wait_Milli_Seconds(#255)
+	Wait_Milli_Seconds(#255)
+	Wait_Milli_Seconds(#255)
+	cpl P0.1
 	
 	;ret
 	ljmp End_Round
@@ -432,6 +445,12 @@ Sub_Score_p2:
 		
 	Set_Cursor(2, 15)
 	Display_BCD(p2Score)
+	cpl P0.1
+	Wait_Milli_Seconds(#255)
+	Wait_Milli_Seconds(#255)
+	Wait_Milli_Seconds(#255)
+	Wait_Milli_Seconds(#255)
+	cpl P0.1
 	ljmp End_Round
 ; pseudocode:
 ; 	if P1 capacitance > 50 (Can replace this number), decrement P1
