@@ -64,15 +64,26 @@ TIMER0_RATE_A   EQU 440
 cseg
 
 SOUND_OUT equ P1.1
+SOUND_OUT1 equ P1.0
 Player_One equ P2.1
 Player_Two equ P0.0
 
 
-;                     1234567890123456    <- This helps determine the location of the counter
-Initial_Message:  db 'P1          P2', 0
-Overflow_Str:    db '00           00', 0
-Player_One_Text: db 'Player 1: ', 0
-Player_Two_Text: db 'Player 2: ',0
+;                    	1234567890123456    <- This helps determine the location of the counter
+Initial_Message:  	db 'P1            P2', 0
+Overflow_Str:    	db '00           00', 0
+Player_One_Text: 	db 'Player 1: ', 0
+Player_Two_Text: 	db 'Player 2: ',0
+Player_Win1:		db 'Congratulations ', 0
+Player_One_Win2:	db 'Player1 wins!   ', 0
+Player_Two_Win2:	db 'Player2 wins!   ', 0
+Ready_Str: 			db '     Ready?     ', 0
+Ready_3: 			db '       3        ', 0
+Ready_2: 			db '       2        ', 0
+Ready_1: 			db '       1        ', 0
+Go: 				db '      Go!       ', 0
+Play_Again:			db '   Play Again?  ', 0
+Hit_Reset: 			db '   Press Reset  ', 0
 
 
 ; Sends 10-digit BCD number in bcd to the LCD
@@ -249,30 +260,74 @@ skip_this:
 	jz no_signal
 	
 	lcall Calculate_Period
-	; Using integer math, convert the period to frequency:
 
-	;lcall Calculate_Capacitance
-	
-	;ljmp Calculate_Period
-	;mov b, x
-	;mov capacitance, b
+    ret
+forever2:
+    ; synchronize with rising edge of the signal applied to pin P0.0
+    clr TR2 ; Stop timer 2
+    mov TL2, #0
+    mov TH2, #0
+    mov T2ov+0, #0
+    mov T2ov+1, #0
+    clr TF2
+    setb TR2
+    
+    lcall synch1b
+    lcall synch2b
+    lcall measure1b
+    lcall measure2b
+    lcall skip_this2
+    ret
+synch1b:
+	mov a, T2ov+1
+	anl a, #0xfe
+	jnz no_signal ; If the count is larger than 0x01ffffffff*45ns=1.16s, we assume there is no signal
+    jb P2.1, synch1b
+    ret
+synch2b:    
+	mov a, T2ov+1
+	anl a, #0xfe
+	jnz no_signal_jump
+    jnb P2.1, synch2b
+    ; Measure the period of the signal applied to pin P0.0
+    clr TR2
+    mov TL2, #0
+    mov TH2, #0
+    mov T2ov+0, #0
+    mov T2ov+1, #0
+    clr TF2
+    setb TR2 ; Start timer 2
+    ret
+measure1b:
+	mov a, T2ov+1
+	anl a, #0xfe
+	jnz no_signal_jump 
+    jb P2.1, measure1b
+measure2b:    
+	mov a, T2ov+1
+	anl a, #0xfe
+	jnz no_signal_jump
+    jnb P2.1, measure2b
+    clr TR2 ; Stop timer 2, [T2ov+1, T2ov+0, TH2, TL2] * 45.21123ns is the period
+	sjmp skip_this2
 
-	;comparing capacitance with 200 nF
-	;Set_Cursor(2, 1)
-	;lcall hex2bcd
-	;lcall Display_10_digit_BCD
-	 ; Repeat! 
+no_signal_jump:	
+	ljmp no_signal
+    
+skip_this2:
+	; Make sure [T2ov+1, T2ov+2, TH2, TL2]!=0
+	mov a, TL2
+	orl a, TH2
+	orl a, T2ov+0
+	orl a, T2ov+1
+	jz no_signal_jump
+	lcall Calculate_Period
     ret
     
 Inc_Score:
 	lcall forever
-	;load_x(capacitance)
-	;lcall Calculate_Capacitance
-	;mov x+0, capacitance+0
-	;mov x+1, capacitance+1
-	;mov x+2, capacitance+2
-	;mov x+3, capacitance+3
-	load_y(9000000)
+
+	load_y(940000)
 	lcall x_gt_y
 	;if the capacitance is greater than 200, mf will be set to 1
 	
@@ -290,9 +345,28 @@ Add_Score:
 	da a
 	mov p1Score, a
 	Display_BCD(p1Score)
-	
+	lcall Compare_Score_p1
 	ljmp End_Round
-	;ret		
+	
+Inc_Score_p2:
+	clr mf
+	lcall forever2
+	load_y(930000)
+	lcall x_gt_y
+	jb mf, Add_Score_p2
+	ret
+
+Add_Score_p2:
+	clr mf
+	clr a
+	Set_Cursor(2, 15)
+	mov a, p2Score
+	add a, #0x01
+	da a
+	mov p2Score, a
+	Display_BCD(p2Score)
+	lcall Compare_Score_p2
+	ljmp End_Round
 
 Bridge_Forever:
 	ljmp forever
@@ -304,6 +378,7 @@ Bridge_Forever:
 ;	ret
 
 Dec_Score:
+	clr mf
 	lcall forever
 	;lcall Calculate_Capacitance
 	;mov x+0, capacitance+0
@@ -312,7 +387,7 @@ Dec_Score:
 	;mov x+3, capacitance+3
 	Set_Cursor(2, 1)
 	Display_BCD(p1Score)
-	load_y(9000000)
+	load_y(940000)
 	lcall x_gt_y
 	;if the capacitance is greater than 200, mf will be set to 1
 	
@@ -334,6 +409,29 @@ Sub_Score:
 	Display_BCD(p1Score)
 	
 	;ret
+	ljmp End_Round
+
+Dec_Score_p2:
+	clr mf
+	lcall forever2
+	Set_Cursor(2, 15)
+	Display_BCD(p2Score)
+	load_y(930000)
+	lcall x_gt_y
+	;if the capacitance is greater than 200, mf will be set to 1
+	
+	jb mf, Sub_Score_p2
+	ret
+
+Sub_Score_p2:
+	clr mf
+	mov a, p2Score
+	add a, #0x99
+	da a
+	mov p2Score, a
+		
+	Set_Cursor(2, 15)
+	Display_BCD(p2Score)
 	ljmp End_Round
 ; pseudocode:
 ; 	if P1 capacitance > 50 (Can replace this number), decrement P1
@@ -361,31 +459,84 @@ Wait_Random_Time:
     lcall Random
 	Wait_Milli_Seconds(Seed+0)
 	lcall Dec_Score
+	lcall Dec_Score_p2
     Wait_Milli_Seconds(Seed+1)
     ;Inc_Score ... so on in between each random wait time
     lcall Dec_Score
+	lcall Dec_Score_p2
     Wait_Milli_Seconds(Seed+2)
     lcall Dec_Score
+	lcall Dec_Score_p2
     Wait_Milli_Seconds(Seed+3)
     lcall Dec_Score
+	lcall Dec_Score_p2
+	
+	Wait_Milli_Seconds(Seed+0)
+	lcall Dec_Score
+	lcall Dec_Score_p2
+    Wait_Milli_Seconds(Seed+1)
+    ;Inc_Score ... so on in between each random wait time
+    lcall Dec_Score
+	lcall Dec_Score_p2
+    Wait_Milli_Seconds(Seed+2)
+    lcall Dec_Score
+	lcall Dec_Score_p2
+    Wait_Milli_Seconds(Seed+3)
+    lcall Dec_Score
+	lcall Dec_Score_p2
+	
+	Wait_Milli_Seconds(Seed+0)
+	lcall Dec_Score
+	lcall Dec_Score_p2
+    Wait_Milli_Seconds(Seed+1)
+    ;Inc_Score ... so on in between each random wait time
+    lcall Dec_Score
+	lcall Dec_Score_p2
+    Wait_Milli_Seconds(Seed+2)
+    lcall Dec_Score
+	lcall Dec_Score_p2
+    Wait_Milli_Seconds(Seed+3)
+    lcall Dec_Score
+	lcall Dec_Score_p2
+	
+	Wait_Milli_Seconds(Seed+0)
+	lcall Dec_Score
+	lcall Dec_Score_p2
+    Wait_Milli_Seconds(Seed+1)
+    ;Inc_Score ... so on in between each random wait time
+    lcall Dec_Score
+	lcall Dec_Score_p2
+    Wait_Milli_Seconds(Seed+2)
+    lcall Dec_Score
+	lcall Dec_Score_p2
+    Wait_Milli_Seconds(Seed+3)
+    lcall Dec_Score
+	lcall Dec_Score_p2
     
     ret    
     
 Wait_Constant_Time:
 	Wait_Milli_Seconds(#255)
 	lcall Inc_Score
+	lcall Inc_Score_p2
     Wait_Milli_Seconds(#255)
     lcall Inc_Score
+	lcall Inc_Score_p2
     Wait_Milli_Seconds(#255)
     lcall Inc_Score
+	lcall Inc_Score_p2
     Wait_Milli_Seconds(#255)
     lcall Inc_Score
+	lcall Inc_Score_p2
     Wait_Milli_Seconds(#255)
     lcall Inc_Score
+	lcall Inc_Score_p2
     Wait_Milli_Seconds(#255)
     lcall Inc_Score
+	lcall Inc_Score_p2
     Wait_Milli_Seconds(#255)
     lcall Inc_Score
+	lcall Inc_Score_p2
     Wait_Milli_Seconds(#255)
     ret
     
@@ -403,18 +554,52 @@ One_Cycle:
     ;Wait for slap, if slapped, decrement score
     ljmp One_Cycle
     
-Compare_Scores:
+Compare_Score_p1:
 ;   if p1Score == 5 , ljmp P1_Wins
+	mov x+0, p1Score
+	mov x+1, #0
+	mov x+2, #0
+	mov x+3, #0
+	load_y(5)
+	lcall x_eq_y
+	jb mf, P1_Wins
+	ret
 	
+Compare_Score_p2:
 ;	if p2Score == 5 , ljmp P2_Wins
-;		
+	mov x+0, p2Score
+	mov x+1, #0
+	mov x+2, #0
+	mov x+3, #0
+	load_y(5)
+	lcall x_eq_y
+	jb mf, P2_Wins
+	ret
+	
+Check_0_p1:
+	
+
+Check_0_p2:
+	
 
 P1_Wins:
 ; Display some sort of message
-
+	Set_Cursor(1, 1)
+	Send_Constant_String(#Player_Win1)
+	Set_Cursor(2, 1)
+	Send_Constant_String(#Player_One_Win2)
+	lcall Game_Over
+	;possibly leave in this state til reset
+	
 P2_Wins:
 ; display some sort of message
-;
+	Set_Cursor(1, 1)
+	Send_Constant_String(#Player_Win1)
+	Set_Cursor(2, 1)
+	Send_Constant_String(#Player_Two_Win2)
+	;possibly leave in this state til reset
+	lcall Game_Over
+	
 Start_Screen:
 
 Calculate_Period:
@@ -429,6 +614,7 @@ Calculate_Period:
 	lcall mul32
 	ret
 	
+	
 End_Round:
 	lcall Timer0_OFF_Init
 	Wait_Milli_Seconds(#255)
@@ -437,12 +623,62 @@ End_Round:
     Wait_Milli_Seconds(#255)
     Wait_Milli_Seconds(#255)
     Wait_Milli_Seconds(#255)
-
     Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Set_Cursor(1, 1)
+    Send_Constant_String(#Ready_Str)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Set_Cursor(1, 1)
+    Send_Constant_String(#Ready_3)
     
     Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Set_Cursor(1, 1)
+    Send_Constant_String(#Ready_2)
+    
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Set_Cursor(1, 1)
+    Send_Constant_String(#Ready_1)
+    
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Set_Cursor(1, 1)
+    Send_Constant_String(#Go)
+    
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Set_Cursor(1, 1)
+    Send_Constant_String(#Initial_Message)
     ljmp One_Cycle
 
-
+Game_Over:
+	lcall Timer0_OFF_Init
+	
+	Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    
+    Set_Cursor(1,1)
+	Send_Constant_String(#Play_Again)
+	Set_Cursor(2, 1)
+	Send_Constant_String(#Hit_Reset)	
+	ljmp Game_Over
 end
-
+;At end, program jumps back to the very top
