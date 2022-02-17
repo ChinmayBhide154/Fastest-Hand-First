@@ -5,6 +5,8 @@ $LIST
 org 0000H
    ljmp MyProgram
    
+org 0x000B
+	ljmp Timer0_ISR
 ; Timer/Counter 2 overflow interrupt vector
 org 0x002B
 	ljmp Timer2_ISR
@@ -13,8 +15,14 @@ org 0x002B
 DSEG at 30H
 x:   ds 4
 y:   ds 4
+z:   ds 4
 bcd: ds 5
 T2ov: ds 2 ; 16-bit timer 2 overflow (to measure the period of very slow signals)
+Seed: ds 4
+p1Score: ds 1
+p2Score: ds 1
+capacitance: ds 4
+
 
 BSEG
 mf: dbit 1
@@ -37,11 +45,6 @@ $NOLIST
 $include(LCD_4bit.inc) ; A library of LCD related functions and utility macros
 $LIST
 
-<<<<<<< Updated upstream
-;                     1234567890123456    <- This helps determine the location of the counter
-Initial_Message:  db 'Capacitance: nF', 0
-No_Signal_Str:    db 'No signal      ', 0
-=======
 CLK           EQU 22118400 ; Microcontroller system crystal frequency in Hz
 TIMER0_OFF_RATE    EQU 65536
 TIMER0_OFF_RELOAD EQU ((65536-(CLK/TIMER0_OFF_RATE)))
@@ -74,7 +77,6 @@ Player_Win1:		db 'Congratulations ', 0
 Player_One_Win2:	db 'Player1 wins!   ', 0
 Player_Two_Win2:	db 'Player2 wins!   ', 0
 
->>>>>>> Stashed changes
 
 ; Sends 10-digit BCD number in bcd to the LCD
 Display_10_digit_BCD:
@@ -105,6 +107,55 @@ Timer2_ISR_done:
 	pop acc
 	reti
 
+Timer0_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD)
+	mov TL0, #low(TIMER0_RELOAD)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD)
+	mov RL0, #low(TIMER0_RELOAD)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+Timer0_HIGH_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_HIGH)
+	mov TL0, #low(TIMER0_RELOAD_HIGH)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_HIGH)
+	mov RL0, #low(TIMER0_RELOAD_HIGH)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+
+Timer0_OFF_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_OFF_RELOAD)
+	mov TL0, #low(TIMER0_OFF_RELOAD)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_OFF_RELOAD)
+	mov RL0, #low(TIMER0_OFF_RELOAD)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+Timer0_ISR:
+	;clr TF0  ; According to the data sheet this is done for us already.
+	cpl SOUND_OUT ; Connect speaker to P1.1!
+	reti
+
 ;---------------------------------;
 ; Hardware initialization         ;
 ;---------------------------------;
@@ -122,10 +173,22 @@ MyProgram:
     mov SP, #7FH
     lcall Initialize_All
     setb P0.0 ; Pin is used as input
-
+    
+    mov p1Score, #0
+    mov p2Score, #0
+    
 	Set_Cursor(1, 1)
     Send_Constant_String(#Initial_Message)
     
+    lcall Timer0_Init
+    lcall InitTimer2
+    
+    mov Seed+0, TH2
+    mov Seed+1, #0x01
+    mov Seed+2, #0x87
+    mov Seed+3, TL2
+    
+    lcall One_Cycle
 forever:
     ; synchronize with rising edge of the signal applied to pin P0.0
     clr TR2 ; Stop timer 2
@@ -135,17 +198,24 @@ forever:
     mov T2ov+1, #0
     clr TF2
     setb TR2
+    
+    lcall synch1
+    lcall synch2
+    lcall measure1
+    lcall measure2
+    lcall skip_this
+    ret
 synch1:
 	mov a, T2ov+1
 	anl a, #0xfe
 	jnz no_signal ; If the count is larger than 0x01ffffffff*45ns=1.16s, we assume there is no signal
     jb P0.0, synch1
+    ret
 synch2:    
 	mov a, T2ov+1
 	anl a, #0xfe
 	jnz no_signal
     jnb P0.0, synch2
-    
     ; Measure the period of the signal applied to pin P0.0
     clr TR2
     mov TL2, #0
@@ -154,6 +224,7 @@ synch2:
     mov T2ov+1, #0
     clr TF2
     setb TR2 ; Start timer 2
+    ret
 measure1:
 	mov a, T2ov+1
 	anl a, #0xfe
@@ -169,31 +240,31 @@ measure2:
 	sjmp skip_this
 no_signal:	
 	Set_Cursor(2, 1)
-    Send_Constant_String(#No_Signal_Str)
+    Send_Constant_String(#Overflow_Str)
     ljmp forever ; Repeat! 
+    
 skip_this:
-
 	; Make sure [T2ov+1, T2ov+2, TH2, TL2]!=0
 	mov a, TL2
 	orl a, TH2
 	orl a, T2ov+0
 	orl a, T2ov+1
 	jz no_signal
-<<<<<<< Updated upstream
-	; Using integer math, convert the period to frequency:
-	mov x+0, TL2
-	mov x+1, TH2
-	mov x+2, T2ov+0
-	mov x+3, T2ov+1
-	Load_y(45) ; One clock pulse is 1/22.1184MHz=45.21123ns
-	lcall mul32
-	
-	Load_y(10)
-	lcall div32
-=======
 	
 	lcall Calculate_Period
+	; Using integer math, convert the period to frequency:
 
+	;lcall Calculate_Capacitance
+	
+	;ljmp Calculate_Period
+	;mov b, x
+	;mov capacitance, b
+
+	;comparing capacitance with 200 nF
+	;Set_Cursor(2, 1)
+	;lcall hex2bcd
+	;lcall Display_10_digit_BCD
+	 ; Repeat! 
     ret
 forever2:
     ; synchronize with rising edge of the signal applied to pin P0.0
@@ -259,31 +330,25 @@ skip_this2:
     
 Inc_Score:
 	lcall forever
-
+	;load_x(capacitance)
+	;lcall Calculate_Capacitance
+	;mov x+0, capacitance+0
+	;mov x+1, capacitance+1
+	;mov x+2, capacitance+2
+	;mov x+3, capacitance+3
 	load_y(940000)
 	lcall x_gt_y
 	;if the capacitance is greater than 200, mf will be set to 1
->>>>>>> Stashed changes
 	
-	Load_y(10)
-	lcall div32
+	jb mf, Add_Score
+	ret
 	
-	Load_y(144)
-	lcall mul32
+Add_Score:
+	clr mf
+	;inc p1Score
+	clr a
+	Set_Cursor(2, 1)
 	
-<<<<<<< Updated upstream
-	Load_y(100)
-	lcall div32
-	
-	Load_y(220)
-	lcall div32
-	
-	Load_y(10)
-	lcall div32
-	
-	Load_y(100)
-	lcall mul32
-=======
 	mov a, p1Score
 	add a, #0x01
 	da a
@@ -334,21 +399,21 @@ Dec_Score:
 	load_y(940000)
 	lcall x_gt_y
 	;if the capacitance is greater than 200, mf will be set to 1
->>>>>>> Stashed changes
 	
-	Load_y(100)
-	lcall sub32
+	jb mf, Sub_Score
+	ret
 	
-	; Convert the result to BCD and display on LCD
-	Set_Cursor(2, 1)
-<<<<<<< Updated upstream
-	lcall hex2bcd
-	lcall Display_10_digit_BCD
-    ljmp forever ; Repeat! 
-    
+Sub_Score:
+	clr mf
+	;dec p1Score
 
-end
-=======
+	;load_x(p1Score)
+	mov a, p1Score
+	add a, #0x99
+	da a
+	mov p1Score, a
+		
+	Set_Cursor(2, 1)
 	;lcall hex2bcd
 	Display_BCD(p1Score)
 	
@@ -490,7 +555,7 @@ P1_Wins:
 	Send_Constant_String(#Player_Win1)
 	Set_Cursor(2, 1)
 	Send_Constant_String(#Player_One_Win2)
-	lcall Game_Over
+	lcall End_Round
 	;possibly leave in this state til reset
 	
 P2_Wins:
@@ -500,7 +565,7 @@ P2_Wins:
 	Set_Cursor(2, 1)
 	Send_Constant_String(#Player_Two_Win2)
 	;possibly leave in this state til reset
-	lcall Game_Over
+	lcall End_Round
 	
 Start_Screen:
 
@@ -516,22 +581,25 @@ Calculate_Period:
 	lcall mul32
 	ret
 	
-	
 End_Round:
 	lcall Timer0_OFF_Init
+	mov p1Score, #0
+	mov p2Score, #0
+	Set_Cursor(1, 1)
+	Send_Constant_String(#Initial_Message)
+	
 	Wait_Milli_Seconds(#255)
     Wait_Milli_Seconds(#255)
     Wait_Milli_Seconds(#255)
     Wait_Milli_Seconds(#255)
     Wait_Milli_Seconds(#255)
     Wait_Milli_Seconds(#255)
+
     Wait_Milli_Seconds(#255)
+    
     Wait_Milli_Seconds(#255)
     ljmp One_Cycle
 
-Game_Over:
-	lcall Timer0_OFF_Init	
-	ljmp Game_Over
+
 end
-;At end, program jumps back to the very top
->>>>>>> Stashed changes
+
