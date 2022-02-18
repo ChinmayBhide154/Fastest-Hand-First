@@ -48,7 +48,7 @@ $LIST
 CLK           EQU 22118400 ; Microcontroller system crystal frequency in Hz
 TIMER0_OFF_RATE    EQU 65536
 TIMER0_OFF_RELOAD EQU ((65536-(CLK/TIMER0_OFF_RATE)))
-TIMER0_RATE   EQU 1000     ; 2048Hz squarewave (peak amplitude of CEM-1203 speaker)
+TIMER0_RATE   EQU 783     ; 2048Hz squarewave (peak amplitude of CEM-1203 speaker)
 TIMER0_RATE_HIGH EQU 4096
 TIMER0_RATE_LOW EQU 1000
 TIMER0_RELOAD EQU ((65536-(CLK/TIMER0_RATE)))
@@ -59,6 +59,18 @@ TIMER2_RELOAD EQU ((65536-(CLK/TIMER2_RATE)))
 
 ;Music Frequencies
 TIMER0_RATE_A   EQU 440 
+TIMER0_RATE_E   EQU 659 
+TIMER0_RATE_GH  EQU 784 
+TIMER0_RATE_GL  EQU 392 
+TIMER0_RATE_D   EQU 587 
+TIMER0_RATE_B   EQU 493 
+
+TIMER0_RELOAD_A EQU ((65536-(CLK/TIMER0_RATE_A)))
+TIMER0_RELOAD_E EQU ((65536-(CLK/TIMER0_RATE_E)))
+TIMER0_RELOAD_GH EQU ((65536-(CLK/TIMER0_RATE_GH)))
+TIMER0_RELOAD_GL EQU ((65536-(CLK/TIMER0_RATE_GL)))
+TIMER0_RELOAD_D EQU ((65536-(CLK/TIMER0_RATE_D)))
+TIMER0_RELOAD_B EQU ((65536-(CLK/TIMER0_RATE_B)))
 
 
 cseg
@@ -86,6 +98,7 @@ Play_Again:			db '   Play Again?  ', 0
 Hit_Reset: 			db '   Press Reset  ', 0
 
 
+
 ; Sends 10-digit BCD number in bcd to the LCD
 Display_10_digit_BCD:
 	Display_BCD(bcd+4)
@@ -94,6 +107,96 @@ Display_10_digit_BCD:
 	Display_BCD(bcd+1)
 	Display_BCD(bcd+0)
 	ret
+
+TIMER0_RATE_B_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_B)
+	mov TL0, #low(TIMER0_RELOAD_B)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_B)
+	mov RL0, #low(TIMER0_RELOAD_B)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+
+TIMER0_RATE_D_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_D)
+	mov TL0, #low(TIMER0_RELOAD_D)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_D)
+	mov RL0, #low(TIMER0_RELOAD_D)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+TIMER0_RATE_GL_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_GL)
+	mov TL0, #low(TIMER0_RELOAD_GL)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_GL)
+	mov RL0, #low(TIMER0_RELOAD_GL)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+
+Timer0_RATE_E_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_E)
+	mov TL0, #low(TIMER0_RELOAD_E)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_E)
+	mov RL0, #low(TIMER0_RELOAD_E)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_A_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_A)
+	mov TL0, #low(TIMER0_RELOAD_A)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_A)
+	mov RL0, #low(TIMER0_RELOAD_A)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_GH_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_GH)
+	mov TL0, #low(TIMER0_RELOAD_GH)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_GH)
+	mov RL0, #low(TIMER0_RELOAD_GH)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+
 
 ;Initializes timer/counter 2 as a 16-bit timer
 InitTimer2:
@@ -159,6 +262,9 @@ Timer0_OFF_Init:
     setb ET0  ; Enable timer 0 interrupt
     setb TR0  ; Start timer 0
 	ret
+	
+
+
 Timer0_ISR:
 	;clr TF0  ; According to the data sheet this is done for us already.
 	cpl SOUND_OUT ; Connect speaker to P1.1!
@@ -196,6 +302,21 @@ MyProgram:
     mov Seed+1, #0x01
     mov Seed+2, #0x87
     mov Seed+3, TL2
+    
+    lcall Start_Lights
+    lcall Make_Music
+    lcall Make_Music
+    
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    
+    lcall End_Round
     
     lcall One_Cycle
 forever:
@@ -328,7 +449,7 @@ skip_this2:
 Inc_Score:
 	lcall forever
 
-	load_y(940000)
+	load_y(928000)
 	lcall x_gt_y
 	;if the capacitance is greater than 200, mf will be set to 1
 	
@@ -346,13 +467,14 @@ Add_Score:
 	da a
 	mov p1Score, a
 	Display_BCD(p1Score)
+	lcall Green_light
 	lcall Compare_Score_p1
 	ljmp End_Round
 	
 Inc_Score_p2:
 	clr mf
 	lcall forever2
-	load_y(930000)
+	load_y(935000)
 	lcall x_gt_y
 	jb mf, Add_Score_p2
 	ret
@@ -366,12 +488,7 @@ Add_Score_p2:
 	da a
 	mov p2Score, a
 	Display_BCD(p2Score)
-	cpl P0.1
-	Wait_Milli_Seconds(#255)
-	Wait_Milli_Seconds(#255)
-	Wait_Milli_Seconds(#255)
-	Wait_Milli_Seconds(#255)
-	cpl P0.1
+	lcall Green_Light
 	lcall Compare_Score_p2
 	ljmp End_Round
 
@@ -394,7 +511,7 @@ Dec_Score:
 	;mov x+3, capacitance+3
 	Set_Cursor(2, 1)
 	Display_BCD(p1Score)
-	load_y(940000)
+	load_y(928000)
 	lcall x_gt_y
 	;if the capacitance is greater than 200, mf will be set to 1
 	
@@ -414,12 +531,8 @@ Sub_Score:
 	Set_Cursor(2, 1)
 	;lcall hex2bcd
 	Display_BCD(p1Score)
-	cpl P0.1
-	Wait_Milli_Seconds(#255)
-	Wait_Milli_Seconds(#255)
-	Wait_Milli_Seconds(#255)
-	Wait_Milli_Seconds(#255)
-	cpl P0.1
+	lcall Timer0_OFF_Init
+	lcall Red_Light
 	
 	;ret
 	ljmp End_Round
@@ -429,7 +542,7 @@ Dec_Score_p2:
 	lcall forever2
 	Set_Cursor(2, 15)
 	Display_BCD(p2Score)
-	load_y(930000)
+	load_y(935000)
 	lcall x_gt_y
 	;if the capacitance is greater than 200, mf will be set to 1
 	
@@ -445,12 +558,7 @@ Sub_Score_p2:
 		
 	Set_Cursor(2, 15)
 	Display_BCD(p2Score)
-	cpl P0.1
-	Wait_Milli_Seconds(#255)
-	Wait_Milli_Seconds(#255)
-	Wait_Milli_Seconds(#255)
-	Wait_Milli_Seconds(#255)
-	cpl P0.1
+	lcall Red_Light
 	ljmp End_Round
 ; pseudocode:
 ; 	if P1 capacitance > 50 (Can replace this number), decrement P1
@@ -621,6 +729,71 @@ P2_Wins:
 	
 Start_Screen:
 
+Green_Light:
+	lcall Timer0_OFF_Init
+	cpl P2.5
+	Wait_Milli_Seconds(#255)
+	cpl P2.7
+	Wait_Milli_Seconds(#255)
+	cpl P0.7
+	Wait_Milli_Seconds(#255)
+	cpl P0.5
+	Wait_Milli_Seconds(#255)
+	cpl P2.5
+	Wait_Milli_Seconds(#255)
+	cpl P2.7
+	Wait_Milli_Seconds(#255)
+	cpl P0.7
+	Wait_Milli_Seconds(#255)
+	cpl P0.5
+	ret
+	
+Red_Light:
+	lcall Timer0_OFF_Init
+	cpl P0.1
+	Wait_Milli_Seconds(#255)
+	cpl P0.2
+	Wait_Milli_Seconds(#255)
+	cpl P0.3
+	Wait_Milli_Seconds(#255)
+	cpl P0.4
+	Wait_Milli_Seconds(#255)
+	cpl P0.1
+	Wait_Milli_Seconds(#255)
+	cpl P0.2
+	Wait_Milli_Seconds(#255)
+	cpl P0.3
+	Wait_Milli_Seconds(#255)
+	cpl P0.4
+	ret
+	
+Start_Lights:
+	lcall Timer0_OFF_Init
+	cpl P2.5
+	cpl P0.1
+	Wait_Milli_Seconds(#255)
+	cpl P2.7
+	cpl P0.2
+	Wait_Milli_Seconds(#255)
+	cpl P0.7
+	cpl P0.3
+	Wait_Milli_Seconds(#255)
+	cpl P0.5
+	cpl P0.4
+	Wait_Milli_Seconds(#255)
+	cpl P2.5
+	cpl P0.1
+	Wait_Milli_Seconds(#255)
+	cpl P2.7
+	cpl P0.2
+	Wait_Milli_Seconds(#255)
+	cpl P0.7
+	cpl P0.3
+	Wait_Milli_Seconds(#255)
+	cpl P0.5
+	cpl P0.4
+	ret
+	
 Calculate_Period:
 	mov x+0, TL2
 	mov x+1, TH2
@@ -636,11 +809,11 @@ Calculate_Period:
 	
 End_Round:
 	lcall Timer0_OFF_Init
-	Wait_Milli_Seconds(#255)
-    Wait_Milli_Seconds(#255)
-    Wait_Milli_Seconds(#255)
-    Wait_Milli_Seconds(#255)
-    Wait_Milli_Seconds(#255)
+;	Wait_Milli_Seconds(#255)
+   ; Wait_Milli_Seconds(#255)
+    ;Wait_Milli_Seconds(#255)
+    ;Wait_Milli_Seconds(#255)
+    ;Wait_Milli_Seconds(#255)
     Wait_Milli_Seconds(#255)
     Wait_Milli_Seconds(#255)
     Wait_Milli_Seconds(#255)
@@ -699,5 +872,89 @@ Game_Over:
 	Set_Cursor(2, 1)
 	Send_Constant_String(#Hit_Reset)	
 	ljmp Game_Over
+	
+Make_Music:
+	lcall Timer0_Rate_E_Init
+	Wait_Milli_Seconds(#255)
+	Wait_Milli_Seconds(#255)
+	lcall Timer0_OFF_Init
+	Wait_Milli_Seconds(#255)
+	Wait_Milli_Seconds(#255)
+	lcall Timer0_Rate_D_Init
+	lcall Timer0_OFF_Init
+	
+	lcall Timer0_Rate_D_Init
+	Wait_Milli_Seconds(#150)
+	lcall Timer0_OFF_Init
+	Wait_Milli_Seconds(#20)
+	
+	lcall Timer0_Rate_D_Init
+	Wait_Milli_Seconds(#150)
+	lcall Timer0_OFF_Init
+	Wait_Milli_Seconds(#20)
+	
+	lcall Timer0_Rate_D_Init
+	Wait_Milli_Seconds(#150)
+	lcall Timer0_OFF_Init
+	Wait_Milli_Seconds(#20)
+	
+	Wait_Milli_Seconds(#255)
+	Wait_Milli_Seconds(#255)
+	Wait_Milli_Seconds(#255)
+	
+	lcall Timer0_Rate_A_Init
+	Wait_Milli_Seconds(#150)
+	lcall Timer0_OFF_Init
+	Wait_Milli_Seconds(#20)
+	
+	lcall Timer0_Rate_A_Init
+	Wait_Milli_Seconds(#150)
+	lcall Timer0_OFF_Init
+	Wait_Milli_Seconds(#20)
+	
+	lcall Timer0_Rate_A_Init
+	Wait_Milli_Seconds(#150)
+	lcall Timer0_OFF_Init
+	Wait_Milli_Seconds(#20)
+	
+	Wait_Milli_Seconds(#255)
+	Wait_Milli_Seconds(#255)
+	Wait_Milli_Seconds(#255)
+	
+	Wait_Milli_Seconds(#255)
+	Wait_Milli_Seconds(#255)
+	Wait_Milli_Seconds(#255)
+	
+	lcall Timer0_Rate_GH_Init
+	Wait_Milli_Seconds(#150)
+	
+	lcall Timer0_Rate_E_Init
+	Wait_Milli_Seconds(#150)
+	
+	lcall Timer0_Rate_D_Init
+	Wait_Milli_Seconds(#150)
+	
+	lcall Timer0_Rate_B_Init
+	Wait_Milli_Seconds(#150)
+	
+	lcall Timer0_Rate_A_Init
+	Wait_Milli_Seconds(#150)
+	
+	lcall Timer0_Rate_B_Init
+	Wait_Milli_Seconds(#150)
+	
+	lcall Timer0_Rate_A_Init
+	Wait_Milli_Seconds(#150)
+	
+	lcall Timer0_Rate_GL_Init
+	Wait_Milli_Seconds(#150)
+	
+	lcall Timer0_OFF_Init
+	Wait_Milli_Seconds(#255)
+	Wait_Milli_Seconds(#255)
+	Wait_Milli_Seconds(#255)
+	
+	ret
+	
 end
 ;At end, program jumps back to the very top
