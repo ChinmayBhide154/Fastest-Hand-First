@@ -45,6 +45,39 @@ $NOLIST
 $include(LCD_4bit.inc) ; A library of LCD related functions and utility macros
 $LIST
 
+;Music Frequencies
+TIMER0_RATE_B3  EQU 247 
+TIMER0_RATE_C4  EQU 262 
+TIMER0_RATE_CS4	EQU	277
+TIMER0_RATE_D4  EQU 294
+TIMER0_RATE_DS4 EQU 311
+TIMER0_RATE_E4  EQU 330
+TIMER0_RATE_F4  EQU 350
+TIMER0_RATE_FS4 EQU 370
+TIMER0_RATE_G4  EQU 390
+TIMER0_RATE_GS4 EQU 415
+TIMER0_RATE_A4	EQU 440
+TIMER0_RATE_AS4 EQU 466
+TIMER0_RATE_B4  EQU 494
+ 
+TIMER0_RATE_C5  EQU 523 
+TIMER0_RATE_CS5	EQU	554
+TIMER0_RATE_D5  EQU 587
+TIMER0_RATE_DS5 EQU 622
+TIMER0_RATE_E5  EQU 659
+TIMER0_RATE_F5  EQU 698
+TIMER0_RATE_FS5 EQU 740
+TIMER0_RATE_G5  EQU 784
+TIMER0_RATE_GS5 EQU 831
+TIMER0_RATE_A5	EQU 880
+TIMER0_RATE_AS5 EQU 932
+TIMER0_RATE_B5  EQU 988 
+
+TIMER0_RATE_C6  EQU 1047
+
+
+
+
 CLK           EQU 22118400 ; Microcontroller system crystal frequency in Hz
 TIMER0_OFF_RATE    EQU 65536
 TIMER0_OFF_RELOAD EQU ((65536-(CLK/TIMER0_OFF_RATE)))
@@ -73,6 +106,44 @@ TIMER0_RELOAD_D EQU ((65536-(CLK/TIMER0_RATE_D)))
 TIMER0_RELOAD_B EQU ((65536-(CLK/TIMER0_RATE_B)))
 
 
+;New Frequencies
+
+
+
+
+
+;Music frequency add
+TIMER0_RELOAD_B3 	EQU ((65536-(CLK/TIMER0_RATE_B3)))
+TIMER0_RELOAD_C4 	EQU ((65536-(CLK/TIMER0_RATE_C4)))
+TIMER0_RELOAD_CS4 	EQU ((65536-(CLK/TIMER0_RATE_CS4)))
+TIMER0_RELOAD_D4 	EQU ((65536-(CLK/TIMER0_RATE_D4)))
+TIMER0_RELOAD_DS4 	EQU ((65536-(CLK/TIMER0_RATE_DS4)))
+TIMER0_RELOAD_E4	EQU ((65536-(CLK/TIMER0_RATE_E4)))
+TIMER0_RELOAD_F4 	EQU ((65536-(CLK/TIMER0_RATE_F4)))
+TIMER0_RELOAD_FS4 	EQU ((65536-(CLK/TIMER0_RATE_FS4)))
+TIMER0_RELOAD_G4 	EQU ((65536-(CLK/TIMER0_RATE_G4)))
+TIMER0_RELOAD_GS4 	EQU ((65536-(CLK/TIMER0_RATE_GS4)))
+TIMER0_RELOAD_A4	EQU ((65536-(CLK/TIMER0_RATE_A4)))
+TIMER0_RELOAD_AS4 	EQU ((65536-(CLK/TIMER0_RATE_AS4)))
+TIMER0_RELOAD_B4 	EQU ((65536-(CLK/TIMER0_RATE_B4)))
+
+TIMER0_RELOAD_C5 	EQU ((65536-(CLK/TIMER0_RATE_C5)))
+TIMER0_RELOAD_CS5 	EQU ((65536-(CLK/TIMER0_RATE_CS5)))
+TIMER0_RELOAD_D5	EQU ((65536-(CLK/TIMER0_RATE_D5)))
+TIMER0_RELOAD_DS5 	EQU ((65536-(CLK/TIMER0_RATE_DS5)))
+TIMER0_RELOAD_E5	EQU ((65536-(CLK/TIMER0_RATE_E5)))
+TIMER0_RELOAD_F5 	EQU ((65536-(CLK/TIMER0_RATE_F5)))
+TIMER0_RELOAD_FS5 	EQU ((65536-(CLK/TIMER0_RATE_FS5)))
+TIMER0_RELOAD_G5 	EQU ((65536-(CLK/TIMER0_RATE_G5)))
+TIMER0_RELOAD_GS5 	EQU ((65536-(CLK/TIMER0_RATE_GS5)))
+TIMER0_RELOAD_A5 	EQU ((65536-(CLK/TIMER0_RATE_A5)))
+TIMER0_RELOAD_AS5 	EQU ((65536-(CLK/TIMER0_RATE_AS5)))
+TIMER0_RELOAD_B5 	EQU ((65536-(CLK/TIMER0_RATE_B5)))
+
+TIMER0_RELOAD_C6 	EQU ((65536-(CLK/TIMER0_RATE_C6)))
+
+
+
 cseg
 
 SOUND_OUT equ P1.1
@@ -89,6 +160,8 @@ Player_Two_Text: 	db 'Player 2: ',0
 Player_Win1:		db 'Congratulations ', 0
 Player_One_Win2:	db 'Player1 wins!   ', 0
 Player_Two_Win2:	db 'Player2 wins!   ', 0
+You_Win1:			db '    You Win!    ', 0
+You_Win2:			db 'Still no friends', 0
 Ready_Str: 			db '     Ready?     ', 0
 Ready_3: 			db '       3        ', 0
 Ready_2: 			db '       2        ', 0
@@ -97,6 +170,9 @@ Go: 				db '      Go!       ', 0
 Play_Again:			db '   Play Again?  ', 0
 Hit_Reset: 			db '   Press Reset  ', 0
 Clear_Screen: 		db '                ', 0
+One_Player_Message: db ' One Player? Or ', 0
+Two_Player_Message: db '   Two Player?  ', 0
+Initial_Message_P1: db 'P1              ', 0
 
 L_W: 					db 'W', 0
 L_E: 					db 'E', 0
@@ -119,6 +195,396 @@ Display_10_digit_BCD:
 	Display_BCD(bcd+2)
 	Display_BCD(bcd+1)
 	Display_BCD(bcd+0)
+	ret
+
+TIMER0_RATE_B3_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_B3)
+	mov TL0, #low(TIMER0_RELOAD_B3)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_B3)
+	mov RL0, #low(TIMER0_RELOAD_B3)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+
+TIMER0_RATE_C4_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_C4)
+	mov TL0, #low(TIMER0_RELOAD_C4)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_C4)
+	mov RL0, #low(TIMER0_RELOAD_C4)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+
+TIMER0_RATE_CS4_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_CS4)
+	mov TL0, #low(TIMER0_RELOAD_CS4)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_CS4)
+	mov RL0, #low(TIMER0_RELOAD_CS4)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_D4_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_D4)
+	mov TL0, #low(TIMER0_RELOAD_D4)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_D4)
+	mov RL0, #low(TIMER0_RELOAD_D4)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+
+TIMER0_RATE_DS4_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_DS4)
+	mov TL0, #low(TIMER0_RELOAD_DS4)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_DS4)
+	mov RL0, #low(TIMER0_RELOAD_DS4)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+
+TIMER0_RATE_E4_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_E4)
+	mov TL0, #low(TIMER0_RELOAD_E4)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_E4)
+	mov RL0, #low(TIMER0_RELOAD_E4)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_F4_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_F4)
+	mov TL0, #low(TIMER0_RELOAD_F4)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_F4)
+	mov RL0, #low(TIMER0_RELOAD_F4)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_FS4_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_FS4)
+	mov TL0, #low(TIMER0_RELOAD_FS4)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_FS4)
+	mov RL0, #low(TIMER0_RELOAD_FS4)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_G4_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_G4)
+	mov TL0, #low(TIMER0_RELOAD_G4)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_G4)
+	mov RL0, #low(TIMER0_RELOAD_G4)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_GS4_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_GS4)
+	mov TL0, #low(TIMER0_RELOAD_GS4)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_GS4)
+	mov RL0, #low(TIMER0_RELOAD_GS4)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_A4_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_A4)
+	mov TL0, #low(TIMER0_RELOAD_A4)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_A4)
+	mov RL0, #low(TIMER0_RELOAD_A4)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_AS4_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_AS4)
+	mov TL0, #low(TIMER0_RELOAD_AS4)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_AS4)
+	mov RL0, #low(TIMER0_RELOAD_AS4)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_B4_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_B4)
+	mov TL0, #low(TIMER0_RELOAD_B4)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_B4)
+	mov RL0, #low(TIMER0_RELOAD_B4)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_C5_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_C5)
+	mov TL0, #low(TIMER0_RELOAD_C5)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_C5)
+	mov RL0, #low(TIMER0_RELOAD_C5)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_CS5_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_CS5)
+	mov TL0, #low(TIMER0_RELOAD_CS5)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_CS5)
+	mov RL0, #low(TIMER0_RELOAD_CS5)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_D5_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_D5)
+	mov TL0, #low(TIMER0_RELOAD_D5)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_D5)
+	mov RL0, #low(TIMER0_RELOAD_D5)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_DS5_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_DS5)
+	mov TL0, #low(TIMER0_RELOAD_DS5)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_DS5)
+	mov RL0, #low(TIMER0_RELOAD_DS5)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_E5_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_E5)
+	mov TL0, #low(TIMER0_RELOAD_E5)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_E5)
+	mov RL0, #low(TIMER0_RELOAD_E5)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_F5_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_F5)
+	mov TL0, #low(TIMER0_RELOAD_F5)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_F5)
+	mov RL0, #low(TIMER0_RELOAD_F5)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_FS5_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_FS5)
+	mov TL0, #low(TIMER0_RELOAD_FS5)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_FS5)
+	mov RL0, #low(TIMER0_RELOAD_FS5)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_G5_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_G5)
+	mov TL0, #low(TIMER0_RELOAD_G5)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_G5)
+	mov RL0, #low(TIMER0_RELOAD_G5)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_GS5_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_GS5)
+	mov TL0, #low(TIMER0_RELOAD_GS5)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_GS5)
+	mov RL0, #low(TIMER0_RELOAD_GS5)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_A5_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_A5)
+	mov TL0, #low(TIMER0_RELOAD_A5)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_A5)
+	mov RL0, #low(TIMER0_RELOAD_A5)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_AS5_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_AS5)
+	mov TL0, #low(TIMER0_RELOAD_AS5)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_AS5)
+	mov RL0, #low(TIMER0_RELOAD_AS5)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+	TIMER0_RATE_B5_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_B5)
+	mov TL0, #low(TIMER0_RELOAD_B5)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_B5)
+	mov RL0, #low(TIMER0_RELOAD_B5)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
+	ret
+	
+TIMER0_RATE_C6_Init:
+	mov a, TMOD
+	anl a, #0xf0 ; Clear the bits for timer 0
+	orl a, #0x01 ; Configure timer 0 as 16-timer
+	mov TMOD, a
+	mov TH0, #high(TIMER0_RELOAD_C6)
+	mov TL0, #low(TIMER0_RELOAD_C6)
+	; Set autoreload value
+	mov RH0, #high(TIMER0_RELOAD_C6)
+	mov RL0, #low(TIMER0_RELOAD_C6)
+	; Enable the timer and interrupts
+    setb ET0  ; Enable timer 0 interrupt
+    setb TR0  ; Start timer 0
 	ret
 
 TIMER0_RATE_B_Init:
@@ -321,8 +787,11 @@ MyProgram:
     mov Seed+2, #0x87
     mov Seed+3, TL2
     
+    ;lcall TomAndJerry
+    lcall Start_Lights
     lcall Start_Lights
     lcall Make_Music
+    lcall Start_Lights
     ;lcall Make_Music
     
     Set_Cursor(1, 1)
@@ -331,15 +800,24 @@ MyProgram:
     Set_Cursor(2, 1)
     Send_Constant_String(#Clear_Screen)
     
+    Set_Cursor(1, 1)
+    Send_Constant_String(#One_Player_Message)
+    
+    Set_Cursor(2, 1)
+    Send_Constant_String(#Two_Player_Message)
+      
+      
+    ljmp Select_Screen  
     Wait_Milli_Seconds(#255)
     Wait_Milli_Seconds(#255)
     Wait_Milli_Seconds(#255);'
     Wait_Milli_Seconds(#255)
    
+   	
     
-    lcall End_Round
+    ;lcall End_Round
     
-    lcall One_Cycle
+    ;lcall One_Cycle
 forever:
     ; synchronize with rising edge of the signal applied to pin P0.0
     clr TR2 ; Stop timer 2
@@ -381,6 +859,7 @@ measure1:
 	anl a, #0xfe
 	jnz no_signal 
     jb P0.0, measure1
+    ret
 measure2:    
 	mov a, T2ov+1
 	anl a, #0xfe
@@ -388,7 +867,7 @@ measure2:
     jnb P0.0, measure2
     clr TR2 ; Stop timer 2, [T2ov+1, T2ov+0, TH2, TL2] * 45.21123ns is the period
 
-	sjmp skip_this
+	ret
 no_signal:	
 	Set_Cursor(2, 1)
     Send_Constant_String(#Overflow_Str)
@@ -476,6 +955,30 @@ Inc_Score:
 	
 	jb mf, Add_Score
 	ret
+
+Inc_Score_1Player:
+	lcall forever
+
+	load_y(928000)
+	lcall x_gt_y
+	
+	jb mf, Add_Score_1Player
+	ret
+
+Add_Score_1Player:
+	clr mf
+	;inc p1Score
+	clr a
+	Set_Cursor(2, 1)
+	
+	mov a, p1Score
+	add a, #0x01
+	da a
+	mov p1Score, a
+	Display_BCD(p1Score)
+	lcall Green_light
+	lcall Compare_Score_p1_1Player
+	ljmp End_Round_1Player
 	
 Add_Score:
 	clr mf
@@ -538,6 +1041,35 @@ Dec_Score:
 	
 	jb mf, Sub_Score
 	ret
+	
+Dec_Score_1P:
+	clr mf
+	lcall forever
+	Set_Cursor(2, 1)
+	Display_BCD(p1Score)
+	load_y(928000)
+	lcall x_gt_y	
+	jb mf, Sub_Score_1P
+	ret
+
+Sub_Score_1P:
+	clr mf
+	;dec p1Score
+
+	;load_x(p1Score)
+	mov a, p1Score
+	add a, #0x99
+	da a
+	mov p1Score, a
+		
+	Set_Cursor(2, 1)
+	;lcall hex2bcd
+	Display_BCD(p1Score)
+	lcall Timer0_OFF_Init
+	lcall Red_Light
+	
+	;ret
+	ljmp End_Round_1Player
 	
 Sub_Score:
 	clr mf
@@ -662,6 +1194,42 @@ Wait_Random_Time:
 	lcall Dec_Score_p2
     
     ret    
+   
+Wait_Random_Time_P1:
+    lcall Random
+	Wait_Milli_Seconds(Seed+0)
+	lcall Dec_Score_1P
+    Wait_Milli_Seconds(Seed+1)
+    lcall Dec_Score_1P
+    Wait_Milli_Seconds(Seed+2)
+    lcall Dec_Score_1P
+    Wait_Milli_Seconds(Seed+3)
+    lcall Dec_Score_1P
+	Wait_Milli_Seconds(Seed+0)
+	lcall Dec_Score_1P
+    Wait_Milli_Seconds(Seed+1)
+    lcall Dec_Score_1P
+    Wait_Milli_Seconds(Seed+2)
+    lcall Dec_Score_1P
+    Wait_Milli_Seconds(Seed+3)
+    lcall Dec_Score_1P
+	Wait_Milli_Seconds(Seed+0)
+	lcall Dec_Score_1P
+    Wait_Milli_Seconds(Seed+1)
+    lcall Dec_Score_1P
+    Wait_Milli_Seconds(Seed+2)
+    lcall Dec_Score_1P
+    Wait_Milli_Seconds(Seed+3)
+    lcall Dec_Score_1P
+	Wait_Milli_Seconds(Seed+0)
+	lcall Dec_Score_1P
+    Wait_Milli_Seconds(Seed+1)
+    lcall Dec_Score_1P
+    Wait_Milli_Seconds(Seed+2)
+    lcall Dec_Score_1P
+    Wait_Milli_Seconds(Seed+3)
+    lcall Dec_Score_1P
+    ret 
     
 Wait_Constant_Time:
 	Wait_Milli_Seconds(#255)
@@ -685,6 +1253,24 @@ Wait_Constant_Time:
     Wait_Milli_Seconds(#255)
     lcall Inc_Score
 	lcall Inc_Score_p2
+    Wait_Milli_Seconds(#255)
+    ret
+    
+Wait_Constant_Time_P1:
+	Wait_Milli_Seconds(#255)
+	lcall Inc_Score_1Player
+    Wait_Milli_Seconds(#255)
+    lcall Inc_Score_1Player
+    Wait_Milli_Seconds(#255)
+    lcall Inc_Score_1Player
+    Wait_Milli_Seconds(#255)
+    lcall Inc_Score_1Player
+    Wait_Milli_Seconds(#255)
+    lcall Inc_Score_1Player
+    Wait_Milli_Seconds(#255)
+    lcall Inc_Score_1Player
+    Wait_Milli_Seconds(#255)
+    lcall Inc_Score_1Player
     Wait_Milli_Seconds(#255)
     ret
     
@@ -712,6 +1298,25 @@ Compare_Score_p1:
 	lcall x_eq_y
 	jb mf, P1_Wins
 	ret
+
+Compare_Score_p1_1Player:
+;   if p1Score == 5 , ljmp P1_Wins
+	mov x+0, p1Score
+	mov x+1, #0
+	mov x+2, #0
+	mov x+3, #0
+	load_y(5)
+	lcall x_eq_y
+	jb mf, You_Win
+	ret
+
+You_Win:
+; Display some sort of message
+	Set_Cursor(1, 1)
+	Send_Constant_String(#You_Win1)
+	Set_Cursor(2, 1)
+	Send_Constant_String(#You_Win2)
+	lcall Game_Over
 	
 Compare_Score_p2:
 ;	if p2Score == 5 , ljmp P2_Wins
@@ -876,8 +1481,56 @@ End_Round:
     Send_Constant_String(#Initial_Message)
     ljmp One_Cycle
 
-Game_Over:
+End_Round_1Player:
 	lcall Timer0_OFF_Init
+;	Wait_Milli_Seconds(#255)
+   ; Wait_Milli_Seconds(#255)
+    ;Wait_Milli_Seconds(#255)
+    ;Wait_Milli_Seconds(#255)
+    ;Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Set_Cursor(1, 1)
+    Send_Constant_String(#Ready_Str)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Set_Cursor(1, 1)
+    Send_Constant_String(#Ready_3)
+    
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Set_Cursor(1, 1)
+    Send_Constant_String(#Ready_2)
+    
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Set_Cursor(1, 1)
+    Send_Constant_String(#Ready_1)
+    
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Set_Cursor(1, 1)
+    Send_Constant_String(#Go)
+    
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255)
+    Set_Cursor(1, 1)
+    Send_Constant_String(#Initial_Message_P1)
+    ljmp P1_Cycle
+    
+Game_Over:
+	lcall TomAndJerry
 	
 	Wait_Milli_Seconds(#255)
     Wait_Milli_Seconds(#255)
@@ -1021,5 +1674,282 @@ Intro_Screen:
 	Send_Constant_String(#L_W)
 	Wait_Milli_Seconds(#255)
 	
+	
+Select_Screen:
+	Wait_Milli_Seconds(#150)
+	jnb P2.0, Bridge_One_Cycle
+	jnb P2.2, Bridge_P1_Cycle
+	ljmp Select_Screen
+	
+Bridge_One_Cycle:
+	Set_Cursor(1, 1)
+	Send_Constant_String(#Clear_Screen)
+	Set_Cursor(2, 1)
+	Send_Constant_String(#Clear_Screen)
+	Set_Cursor(1, 1)
+	Send_Constant_String(#Initial_Message)
+	ljmp One_Cycle
+	
+Bridge_P1_Cycle:
+	Set_Cursor(1, 1)
+	Send_Constant_String(#Clear_Screen)
+	Set_Cursor(2, 1)
+	Send_Constant_String(#Clear_Screen)
+	Set_Cursor(1, 1)
+	Send_Constant_String(#Initial_Message_P1)
+	ljmp P1_Cycle
+	
+	
+P1_Cycle:
+	lcall forever
+	lcall Timer0_Init
+	lcall Wait_Random_Time_P1 ; in here, we are continuously checking if someone slaps, if they do, we decrement
+	lcall forever
+    lcall Timer0_HIGH_Init
+    lcall forever
+    ;Wait for slap, if slapped, increment score
+    lcall Wait_Constant_Time_P1 ; in here, we are continuously checking if someone slaps, if they do we increment
+    lcall forever
+    lcall Timer0_Init
+    ;Wait for slap, if slapped, decrement score
+    ljmp P1_Cycle
+	
+	
+	
+TomAndJerry:
+;140 notes/min ~400 ms
+;Wait_Milli_Seconds(#400)
+
+	; bar 5
+	lcall Timer0_Rate_C5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_D5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_A4_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_C5_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_D5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_A4_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_D5_Init
+	Wait_Milli_Seconds(#200)
+	
+	;bar 6
+	lcall Timer0_Rate_C5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_D5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_A4_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_C5_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_FS4_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_C5_Init
+	Wait_Milli_Seconds(#200) ;tied notes
+	Wait_Milli_Seconds(#200)
+	
+	;bar 7
+	;lcall Timer0_Rate_C5_Init
+	;Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_D5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_G4_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_C5_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_C5_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_AS4_Init
+	Wait_Milli_Seconds(#200)
+	
+	;bar 8
+	lcall Timer0_Rate_A4_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_AS4_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_C5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_D5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_E5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_F5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_D5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_F5_Init
+	Wait_Milli_Seconds(#200)
+	
+	;bar 9
+	lcall Timer0_Rate_E5_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#100)
+	lcall Timer0_Rate_F5_Init
+	Wait_Milli_Seconds(#100)
+	lcall Timer0_Rate_G5_Init
+	Wait_Milli_Seconds(#100)
+	lcall Timer0_OFF_Init ;Rest
+	Wait_Milli_Seconds(#100)
+	lcall Timer0_Rate_C5_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#100)
+	lcall Timer0_Rate_AS4_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	
+	;bar 10
+	lcall Timer0_Rate_C5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_D5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_A4_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_C5_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_C5_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	
+	;bar 11
+	lcall Timer0_Rate_E5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_FS5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_C5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_E5_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_E5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_E5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_E5_Init
+	Wait_Milli_Seconds(#200)
+	
+	;bar 12
+	lcall Timer0_Rate_E5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_FS5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_D5_Init
+	Wait_Milli_Seconds(#100)
+	lcall Timer0_Rate_E5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_CS5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_D5_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_B4_Init
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_C5_Init
+	Wait_Milli_Seconds(#200)
+	
+	;bar 13
+	lcall Timer0_Rate_A4_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#100)
+	lcall Timer0_Rate_GS4_Init
+	Wait_Milli_Seconds(#100)
+	lcall Timer0_Rate_A4_Init
+	Wait_Milli_Seconds(#100)
+	lcall Timer0_OFF_Init
+	Wait_Milli_Seconds(#100) ;Rest
+	lcall Timer0_Rate_C5_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_B3_Init
+	Wait_Milli_Seconds(#70)
+	lcall Timer0_Rate_C4_Init
+	Wait_Milli_Seconds(#80)
+	lcall Timer0_Rate_D4_Init
+	Wait_Milli_Seconds(#90)
+	lcall Timer0_Rate_DS4_Init
+	Wait_Milli_Seconds(#100)
+	lcall Timer0_Rate_E4_Init
+	Wait_Milli_Seconds(#100)
+	lcall Timer0_Rate_F4_Init
+	Wait_Milli_Seconds(#100)
+	
+	;bar 14
+	lcall Timer0_Rate_C5_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_D5_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_A4_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_C5_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	lcall TIMER0_OFF_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	
+	;bar 15
+	lcall Timer0_Rate_AS4_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_C5_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_G4_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_A4_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_B4_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_C5_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	
+	;bar 16
+	lcall Timer0_Rate_G4_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	lcall Timer0_Rate_F4_Init
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	Wait_Milli_Seconds(#200)
+	ret
 end
+
 ;At end, program jumps back to the very top
