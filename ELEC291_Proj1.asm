@@ -96,7 +96,20 @@ Ready_1: 			db '       1        ', 0
 Go: 				db '      Go!       ', 0
 Play_Again:			db '   Play Again?  ', 0
 Hit_Reset: 			db '   Press Reset  ', 0
+Clear_Screen: 		db '                ', 0
 
+L_W: 					db 'W', 0
+L_E: 					db 'E', 0
+L_L: 					db 'L', 0
+L_C: 					db 'C', 0
+L_O: 					db 'O', 0
+L_M: 					db 'M', 0
+L_T: 					db 'T', 0
+L_S: 					db 'S', 0
+L_A: 					db 'A', 0
+L_P: 					db 'P', 0
+L_D: 					db 'D', 0
+L_Dash: 				db '-', 0
 
 
 ; Sends 10-digit BCD number in bcd to the LCD
@@ -293,7 +306,12 @@ MyProgram:
     mov p2Score, #0
     
 	Set_Cursor(1, 1)
-    Send_Constant_String(#Initial_Message)
+    ;Send_Constant_String(#Initial_Message)
+    Send_Constant_String(#Clear_Screen)
+    Set_Cursor(2, 1)
+    Send_Constant_String(#Clear_Screen)
+    
+    ;lcall Intro_Screen
     
     lcall Timer0_Init
     lcall InitTimer2
@@ -305,16 +323,19 @@ MyProgram:
     
     lcall Start_Lights
     lcall Make_Music
-    lcall Make_Music
+    ;lcall Make_Music
+    
+    Set_Cursor(1, 1)
+    ;Send_Constant_String(#Initial_Message)
+    Send_Constant_String(#Clear_Screen)
+    Set_Cursor(2, 1)
+    Send_Constant_String(#Clear_Screen)
     
     Wait_Milli_Seconds(#255)
     Wait_Milli_Seconds(#255)
+    Wait_Milli_Seconds(#255);'
     Wait_Milli_Seconds(#255)
-    Wait_Milli_Seconds(#255)
-    Wait_Milli_Seconds(#255)
-    Wait_Milli_Seconds(#255)
-    Wait_Milli_Seconds(#255)
-    Wait_Milli_Seconds(#255)
+   
     
     lcall End_Round
     
@@ -874,12 +895,22 @@ Game_Over:
 	ljmp Game_Over
 	
 Make_Music:
+	Set_Cursor(1,1)
+	Send_Constant_String(#L_W)
 	lcall Timer0_Rate_E_Init
 	Wait_Milli_Seconds(#255)
+	Set_Cursor(1,2)
+	Send_Constant_String(#L_E)
 	Wait_Milli_Seconds(#255)
+	Set_Cursor(1,3)
+	Send_Constant_String(#L_L)
 	lcall Timer0_OFF_Init
 	Wait_Milli_Seconds(#255)
+	Set_Cursor(1,4)
+	Send_Constant_String(#L_C)
 	Wait_Milli_Seconds(#255)
+	Set_Cursor(1,5)
+	Send_Constant_String(#L_O)
 	lcall Timer0_Rate_D_Init
 	lcall Timer0_OFF_Init
 	
@@ -887,74 +918,108 @@ Make_Music:
 	Wait_Milli_Seconds(#150)
 	lcall Timer0_OFF_Init
 	Wait_Milli_Seconds(#20)
+	Set_Cursor(1,6)
+	Send_Constant_String(#L_M)
 	
 	lcall Timer0_Rate_D_Init
 	Wait_Milli_Seconds(#150)
 	lcall Timer0_OFF_Init
 	Wait_Milli_Seconds(#20)
+	Set_Cursor(1,7)
+	Send_Constant_String(#L_E)
+	
 	
 	lcall Timer0_Rate_D_Init
 	Wait_Milli_Seconds(#150)
 	lcall Timer0_OFF_Init
 	Wait_Milli_Seconds(#20)
+	Set_Cursor(1,9)
+	Send_Constant_String(#L_T)
 	
 	Wait_Milli_Seconds(#255)
+	Set_Cursor(1,10)
+	Send_Constant_String(#L_O)
 	Wait_Milli_Seconds(#255)
+	Set_Cursor(2, 1)
+	Send_Constant_String(#L_S)
 	Wait_Milli_Seconds(#255)
+	Set_Cursor(2, 2)
+	Send_Constant_String(#L_L)
 	
 	lcall Timer0_Rate_A_Init
 	Wait_Milli_Seconds(#150)
+	Set_Cursor(2, 3)
+	Send_Constant_String(#L_A)
 	lcall Timer0_OFF_Init
 	Wait_Milli_Seconds(#20)
 	
 	lcall Timer0_Rate_A_Init
 	Wait_Milli_Seconds(#150)
+	Set_Cursor(2, 4)
+	Send_Constant_String(#L_P)
 	lcall Timer0_OFF_Init
 	Wait_Milli_Seconds(#20)
 	
 	lcall Timer0_Rate_A_Init
 	Wait_Milli_Seconds(#150)
+	Set_Cursor(2, 5)
+	Send_Constant_String(#L_Dash)
 	lcall Timer0_OFF_Init
 	Wait_Milli_Seconds(#20)
 	
 	Wait_Milli_Seconds(#255)
+	Set_Cursor(2, 6)
+	Send_Constant_String(#L_A)
 	Wait_Milli_Seconds(#255)
+	Set_Cursor(2, 7)
+	Send_Constant_String(#L_Dash)
 	Wait_Milli_Seconds(#255)
+	Set_Cursor(2, 8)
+	Send_Constant_String(#L_D)
 	
 	Wait_Milli_Seconds(#255)
+	Set_Cursor(2, 9)
+	Send_Constant_String(#L_O)
 	Wait_Milli_Seconds(#255)
+	Set_Cursor(2, 10)
+	Send_Constant_String(#L_O)
 	Wait_Milli_Seconds(#255)
 	
 	lcall Timer0_Rate_GH_Init
-	Wait_Milli_Seconds(#150)
+	Wait_Milli_Seconds(#130)
 	
 	lcall Timer0_Rate_E_Init
-	Wait_Milli_Seconds(#150)
+	Wait_Milli_Seconds(#130)
 	
 	lcall Timer0_Rate_D_Init
-	Wait_Milli_Seconds(#150)
+	Wait_Milli_Seconds(#130)
 	
 	lcall Timer0_Rate_B_Init
-	Wait_Milli_Seconds(#150)
+	Wait_Milli_Seconds(#130)
 	
 	lcall Timer0_Rate_A_Init
-	Wait_Milli_Seconds(#150)
+	Wait_Milli_Seconds(#130)
 	
 	lcall Timer0_Rate_B_Init
-	Wait_Milli_Seconds(#150)
+	Wait_Milli_Seconds(#80)
 	
 	lcall Timer0_Rate_A_Init
-	Wait_Milli_Seconds(#150)
+	Wait_Milli_Seconds(#130)
 	
 	lcall Timer0_Rate_GL_Init
-	Wait_Milli_Seconds(#150)
+	Wait_Milli_Seconds(#130)
 	
 	lcall Timer0_OFF_Init
 	Wait_Milli_Seconds(#255)
-	Wait_Milli_Seconds(#255)
-	Wait_Milli_Seconds(#255)
+	
 	
 	ret
+	
+Intro_Screen:
+	Send_Constant_String(#Clear_Screen)
+	Set_Cursor(1, 1)
+	Send_Constant_String(#L_W)
+	Wait_Milli_Seconds(#255)
 	
 end
 ;At end, program jumps back to the very top
